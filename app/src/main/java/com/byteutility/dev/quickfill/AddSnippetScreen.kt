@@ -1,12 +1,22 @@
 package com.byteutility.dev.quickfill
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,40 +28,91 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddSnippetScreen(viewModel: SnippetViewModel = viewModel()) {
-    var content by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("General") }
+fun AddSnippetScreen(
+    viewModel: SnippetViewModel = viewModel(),
+    onBack: () -> Unit
+) {
+    var label by remember { mutableStateOf("") }
+    var value by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("GENERAL") }
+    var isExpanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    val categories = listOf("GENERAL", "SOCIAL", "FINANCE", "WORK", "IDENTITY")
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(text = "Add New Snippet", style = MaterialTheme.typography.headlineMedium)
+
+        // 1. Label Input
         OutlinedTextField(
-            value = content,
-            onValueChange = { content = it },
-            label = { Text("Snippet Text") },
-            modifier = Modifier.fillMaxWidth()
+            value = label,
+            onValueChange = { label = it },
+            label = { Text("Label (e.g., My Personal Email)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // 2. Value Input
+        OutlinedTextField(
+            value = value,
+            onValueChange = { value = it },
+            label = { Text("Value (e.g., me@email.com)") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3
+        )
 
-        // Simple Category Picker
-        Text("Category: $category")
-        Row {
-            listOf("Social", "Shopping", "General").forEach { cat ->
-                Button(onClick = { category = cat }, modifier = Modifier.padding(4.dp)) {
-                    Text(cat)
+        // 3. Category Selection (Dropdown)
+        ExposedDropdownMenuBox(
+            expanded = isExpanded,
+            onExpandedChange = { isExpanded = !isExpanded }
+        ) {
+            OutlinedTextField(
+                value = category,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Category") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = isExpanded,
+                onDismissRequest = { isExpanded = false }
+            ) {
+                categories.forEach { selection ->
+                    DropdownMenuItem(
+                        text = { Text(selection) },
+                        onClick = {
+                            category = selection
+                            isExpanded = false
+                        }
+                    )
                 }
             }
         }
 
+        Spacer(modifier = Modifier.weight(1f))
+
+        // 4. Save Button
         Button(
             onClick = {
-                viewModel.saveSnippet(content, category)
-                content = "" // Clear after save
+                if (label.isNotBlank() && value.isNotBlank()) {
+                    viewModel.saveSnippet(label, value, category)
+                    onBack() // Navigate back after saving
+                }
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp)
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp)
         ) {
+            Icon(Icons.Default.Check, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
             Text("Save to Vault")
         }
     }
