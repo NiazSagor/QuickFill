@@ -42,7 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SnippetListScreen(
-    viewModel: SnippetViewModel = viewModel(),
+    viewModel: SnippetViewModel,
     onAddClick: () -> Unit
 ) {
     val snippets by viewModel.allSnippets.collectAsState()
