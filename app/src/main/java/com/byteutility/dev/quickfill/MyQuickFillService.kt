@@ -97,11 +97,11 @@ class MyQuickFillService : AutofillService() {
         return when (category) {
             // android.content.pm.ApplicationInfo.CATEGORY_SOCIAL
             4 -> listOf(
-                Snippet(label = "Greeting", value = "Hey! How's it going?", categoryTag = "Social"),
+                Snippet(label = "Greeting", value = "Hey! How's it going?", category = "Social"),
                 Snippet(
                     label = "Quick Reply",
                     value = "I'll be there in 5 mins!",
-                    categoryTag = "Social"
+                    category = "Social"
                 )
             )
             // android.content.pm.ApplicationInfo.CATEGORY_SHOPPING
@@ -109,15 +109,15 @@ class MyQuickFillService : AutofillService() {
                 Snippet(
                     label = "Home Address",
                     value = "123 Tech Lane, NY 10001",
-                    categoryTag = "Shopping"
+                    category = "Shopping"
                 ),
-                Snippet(label = "Discount Code", value = "SAVE20NOW", categoryTag = "Shopping")
+                Snippet(label = "Discount Code", value = "SAVE20NOW", category = "Shopping")
             )
             // Default "General" snippets for any other app (like Search or Chrome)
             else -> listOf(
-                Snippet(label = "My Email", value = "user@example.com", categoryTag = "General"),
-                Snippet(label = "Phone", value = "+1-555-0199", categoryTag = "General"),
-                Snippet(label = "ID Number", value = "ABC-123-XYZ", categoryTag = "General")
+                Snippet(label = "My Email", value = "user@example.com", category = "General"),
+                Snippet(label = "Phone", value = "+1-555-0199", category = "General"),
+                Snippet(label = "ID Number", value = "ABC-123-XYZ", category = "General")
             )
         }
     }
