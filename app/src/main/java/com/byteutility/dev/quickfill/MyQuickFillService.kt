@@ -3,6 +3,7 @@ package com.byteutility.dev.quickfill
 import android.app.PendingIntent
 import android.app.assist.AssistStructure
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.CancellationSignal
 import android.service.autofill.AutofillService
@@ -18,9 +19,24 @@ import android.service.autofill.SaveRequest
 import android.view.autofill.AutofillValue
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.widget.RemoteViews
+import androidx.annotation.RequiresApi
 import androidx.autofill.inline.v1.InlineSuggestionUi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
+@RequiresApi(Build.VERSION_CODES.O)
 class MyQuickFillService : AutofillService() {
+
+    @Inject
+    lateinit var snippetDao: SnippetDao
+
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
 
     override fun onFillRequest(
         request: FillRequest,
@@ -33,43 +49,60 @@ class MyQuickFillService : AutofillService() {
 
         val category = runCatching {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) appInfo.category else -1
-        }.getOrDefault(-1)
+            detectCategory(appInfo, appInfo.packageName)
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getSnippetCategory(appInfo.category) else getSnippetsForCategory(-1)
+        }.getOrDefault("GENERAL")
 
         val focusedField = findFocusedNode(structure) ?: return
         val fillId = focusedField.autofillId ?: return
 
-        val snippets = getSnippetsForCategory(category)
+        serviceScope.launch {
+            try {
+                val snippets = getSnippetsForCategory(category)
 
-        snippets.forEach { snippet ->
-            val menuPresentation =
-                RemoteViews(this.packageName, android.R.layout.simple_list_item_1).apply {
-                    setTextViewText(android.R.id.text1, snippet.label)
+                if (snippets.isEmpty()) {
+                    callback.onSuccess(null)
+                    return@launch
                 }
 
-            val presBuilder = Presentations.Builder()
-                .setMenuPresentation(menuPresentation)
+                val response = FillResponse.Builder()
 
-            request.inlineSuggestionsRequest?.let { inlineReq ->
-                val inlinePres = createInlinePresentation(snippet, inlineReq)
-                if (inlinePres != null) {
-                    presBuilder.setInlinePresentation(inlinePres)
+                snippets.forEach { snippet ->
+                    val menuPresentation =
+                        RemoteViews(
+                            this@MyQuickFillService.packageName,
+                            android.R.layout.simple_list_item_1
+                        ).apply {
+                            setTextViewText(android.R.id.text1, snippet.label)
+                        }
+
+                    val presBuilder = Presentations.Builder()
+                        .setMenuPresentation(menuPresentation)
+
+                    request.inlineSuggestionsRequest?.let { inlineReq ->
+                        val inlinePres = createInlinePresentation(snippet, inlineReq)
+                        if (inlinePres != null) {
+                            presBuilder.setInlinePresentation(inlinePres)
+                        }
+                    }
+
+                    val field = Field.Builder()
+                        .setValue(AutofillValue.forText(snippet.value))
+                        .setPresentations(presBuilder.build())
+                        .build()
+
+                    val dataset = Dataset.Builder()
+                        .setField(fillId, field)
+                        .build()
+
+                    responseBuilder.addDataset(dataset)
                 }
+
+                callback.onSuccess(response.build())
+            } catch (e: Exception) {
+                callback.onFailure(e.message)
             }
-
-            val field = Field.Builder()
-                .setValue(AutofillValue.forText(snippet.value))
-                .setPresentations(presBuilder.build())
-                .build()
-
-            val dataset = Dataset.Builder()
-                .setField(fillId, field)
-                .build()
-
-            responseBuilder.addDataset(dataset)
         }
-
-        callback.onSuccess(responseBuilder.build())
     }
 
     override fun onSaveRequest(
@@ -93,32 +126,33 @@ class MyQuickFillService : AutofillService() {
         return InlinePresentation(sliceBuilder.build().slice, spec, false)
     }
 
-    private fun getSnippetsForCategory(category: Int): List<Snippet> {
-        return when (category) {
-            // android.content.pm.ApplicationInfo.CATEGORY_SOCIAL
-            4 -> listOf(
-                Snippet(label = "Greeting", value = "Hey! How's it going?", category = "Social"),
-                Snippet(
-                    label = "Quick Reply",
-                    value = "I'll be there in 5 mins!",
-                    category = "Social"
-                )
-            )
-            // android.content.pm.ApplicationInfo.CATEGORY_SHOPPING
-            2 -> listOf(
-                Snippet(
-                    label = "Home Address",
-                    value = "123 Tech Lane, NY 10001",
-                    category = "Shopping"
-                ),
-                Snippet(label = "Discount Code", value = "SAVE20NOW", category = "Shopping")
-            )
-            // Default "General" snippets for any other app (like Search or Chrome)
-            else -> listOf(
-                Snippet(label = "My Email", value = "user@example.com", category = "General"),
-                Snippet(label = "Phone", value = "+1-555-0199", category = "General"),
-                Snippet(label = "ID Number", value = "ABC-123-XYZ", category = "General")
-            )
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun detectCategory(info: ApplicationInfo, packageName: String): String {
+        return when (info.category) {
+            ApplicationInfo.CATEGORY_SOCIAL -> "SOCIAL"
+            ApplicationInfo.CATEGORY_MAPS -> "MAPS"
+            ApplicationInfo.CATEGORY_PRODUCTIVITY -> "WORK"
+            ApplicationInfo.CATEGORY_GAME -> "GAME"
+            ApplicationInfo.CATEGORY_AUDIO -> "AUDIO"
+            ApplicationInfo.CATEGORY_VIDEO -> "VIDEO"
+            ApplicationInfo.CATEGORY_IMAGE -> "IMAGE"
+            ApplicationInfo.CATEGORY_NEWS -> "NEWS"
+            else -> {
+                when {
+                    packageName.contains("whatsapp") || packageName.contains("messenger") -> "SOCIAL"
+                    packageName.contains("amazon") || packageName.contains("ebay") -> "SHOPPING"
+                    packageName.contains("bank") || packageName.contains("wallet") -> "FINANCE"
+                    else -> "GENERAL"
+                }
+            }
+        }
+    }
+
+    private suspend fun getSnippetsForCategory(category: String): List<Snippet> {
+        return withContext(Dispatchers.IO) {
+            val specific = snippetDao.getSnippetsByCategory(category).first()
+            val general = snippetDao.getSnippetsByCategory("GENERAL").first()
+            (specific + general).distinctBy { it.id }
         }
     }
 

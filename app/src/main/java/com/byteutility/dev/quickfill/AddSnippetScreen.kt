@@ -42,7 +42,23 @@ fun AddSnippetScreen(
     var category by remember { mutableStateOf("GENERAL") }
     var isExpanded by remember { mutableStateOf(false) }
 
-    val categories = listOf("GENERAL", "SOCIAL", "FINANCE", "WORK", "IDENTITY")
+    val categories = listOf(
+        "GENERAL",
+        "SOCIAL",
+        "FINANCE",
+        "WORK",
+        "IDENTITY",
+        "GAME",
+        "AUDIO",
+        "VIDEO",
+        "IMAGE",
+        "DOCUMENT",
+        "SOCIAL",
+        "NEWS",
+        "MAPS",
+        "PRODUCTIVITY",
+        "ACCESSIBILITY"
+    )
 
     Scaffold(
         topBar = {

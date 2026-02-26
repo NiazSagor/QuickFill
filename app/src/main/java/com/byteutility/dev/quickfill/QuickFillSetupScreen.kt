@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,7 +30,7 @@ fun QuickFillSetupScreen() {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "QuickFill PoC",
+            text = "QuickFill",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary
         )
@@ -39,7 +38,7 @@ fun QuickFillSetupScreen() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "To use this app, you must enable it in Android Settings.",
+            text = "Android will show a 'Trust this app' warning. This is standard for all Autofill services so they can detect which text field you are tapping on.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
@@ -58,15 +57,6 @@ fun QuickFillSetupScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Enable QuickFill Service")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedButton(
-            onClick = { /* Future: Navigate to Snippet List */ },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("View My Snippets (Dummy)")
         }
     }
 }
