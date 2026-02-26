@@ -1,4 +1,4 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

@@ -1,4 +1,4 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.ui.snippets
 
 
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
+import com.byteutility.dev.quickfill.data.local.Snippet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,4 +1,4 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase

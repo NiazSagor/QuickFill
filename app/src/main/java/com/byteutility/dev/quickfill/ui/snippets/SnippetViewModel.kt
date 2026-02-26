@@ -1,7 +1,9 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.ui.snippets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.byteutility.dev.quickfill.data.local.Snippet
+import com.byteutility.dev.quickfill.data.local.SnippetDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +19,7 @@ class SnippetViewModel @Inject constructor(
     val allSnippets: StateFlow<List<Snippet>> = snippetDao.getAllSnippets()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Companion.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 

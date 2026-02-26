@@ -1,4 +1,4 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.ui
 
 import android.content.Context
 import android.view.autofill.AutofillManager
@@ -13,6 +13,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
+import com.byteutility.dev.quickfill.ui.setup.QuickFillSetupScreen
+import com.byteutility.dev.quickfill.ui.snippets.SnippetListScreen
+import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
 
 @Composable
 fun QuickFillApp(viewModel: SnippetViewModel = viewModel()) {

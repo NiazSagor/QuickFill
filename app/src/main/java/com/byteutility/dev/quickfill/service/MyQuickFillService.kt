@@ -1,5 +1,6 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.service
 
+import android.R
 import android.app.PendingIntent
 import android.app.assist.AssistStructure
 import android.content.Intent
@@ -21,6 +22,8 @@ import android.view.inputmethod.InlineSuggestionsRequest
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import androidx.autofill.inline.v1.InlineSuggestionUi
+import com.byteutility.dev.quickfill.data.local.Snippet
+import com.byteutility.dev.quickfill.data.local.SnippetDao
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.collections.forEach
 
 @AndroidEntryPoint
 @RequiresApi(Build.VERSION_CODES.O)
@@ -77,9 +81,9 @@ class MyQuickFillService : AutofillService() {
                     val menuPresentation =
                         RemoteViews(
                             this@MyQuickFillService.packageName,
-                            android.R.layout.simple_list_item_1
+                            R.layout.simple_list_item_1
                         ).apply {
-                            setTextViewText(android.R.id.text1, snippet.label)
+                            setTextViewText(R.id.text1, snippet.label)
                         }
 
                     val presBuilder = Presentations.Builder()

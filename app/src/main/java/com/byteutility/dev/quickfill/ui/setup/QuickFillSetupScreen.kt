@@ -1,6 +1,7 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.ui.setup
 
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -40,7 +42,7 @@ fun QuickFillSetupScreen() {
         Text(
             text = "Android will show a 'Trust this app' warning. This is standard for all Autofill services so they can detect which text field you are tapping on.",
             style = MaterialTheme.typography.bodyMedium,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -50,7 +52,7 @@ fun QuickFillSetupScreen() {
                 // This intent takes the user directly to the Autofill Service picker
                 val intent = Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).apply {
                     // This data URI tells Android which package is asking
-                    data = android.net.Uri.parse("package:com.byteutility.dev.quickfill")
+                    data = Uri.parse("package:com.byteutility.dev.quickfill")
                 }
                 context.startActivity(intent)
             },

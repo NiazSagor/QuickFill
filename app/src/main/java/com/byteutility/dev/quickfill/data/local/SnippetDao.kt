@@ -1,4 +1,4 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -15,7 +15,7 @@ interface SnippetDao {
     @Query("SELECT * FROM snippets WHERE category = :category")
     fun getSnippetsByCategory(category: String): Flow<List<Snippet>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun insertSnippet(snippet: Snippet)
 
     @Delete

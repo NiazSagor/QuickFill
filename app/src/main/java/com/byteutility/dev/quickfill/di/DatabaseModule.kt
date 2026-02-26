@@ -1,7 +1,9 @@
-package com.byteutility.dev.quickfill
+package com.byteutility.dev.quickfill.di
 
 import android.content.Context
 import androidx.room.Room
+import com.byteutility.dev.quickfill.data.local.SnippetDao
+import com.byteutility.dev.quickfill.data.local.SnippetDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,7 +21,7 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             SnippetDatabase::class.java,
-            SnippetDatabase.DATABASE_NAME
+            SnippetDatabase.Companion.DATABASE_NAME
         ).build()
     }
 
