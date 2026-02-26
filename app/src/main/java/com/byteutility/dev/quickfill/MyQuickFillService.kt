@@ -21,6 +21,7 @@ import android.view.inputmethod.InlineSuggestionsRequest
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import androidx.autofill.inline.v1.InlineSuggestionUi
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+@AndroidEntryPoint
 @RequiresApi(Build.VERSION_CODES.O)
 class MyQuickFillService : AutofillService() {
 
@@ -45,7 +47,6 @@ class MyQuickFillService : AutofillService() {
     ) {
         val structure = request.fillContexts.last().structure
         val packageName = structure.activityComponent.packageName
-        val responseBuilder = FillResponse.Builder()
 
         val category = runCatching {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
@@ -53,7 +54,11 @@ class MyQuickFillService : AutofillService() {
 //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getSnippetCategory(appInfo.category) else getSnippetsForCategory(-1)
         }.getOrDefault("GENERAL")
 
-        val focusedField = findFocusedNode(structure) ?: return
+        val focusedField = findFocusedNode(structure)
+        if (focusedField == null) {
+            callback.onSuccess(null)
+            return
+        }
         val fillId = focusedField.autofillId ?: return
 
         serviceScope.launch {
@@ -65,9 +70,10 @@ class MyQuickFillService : AutofillService() {
                     return@launch
                 }
 
-                val response = FillResponse.Builder()
+                val finalResponseBuilder = FillResponse.Builder()
 
                 snippets.forEach { snippet ->
+
                     val menuPresentation =
                         RemoteViews(
                             this@MyQuickFillService.packageName,
@@ -95,10 +101,11 @@ class MyQuickFillService : AutofillService() {
                         .setField(fillId, field)
                         .build()
 
-                    responseBuilder.addDataset(dataset)
+                    finalResponseBuilder.addDataset(dataset)
                 }
 
-                callback.onSuccess(response.build())
+                callback.onSuccess(finalResponseBuilder.build())
+
             } catch (e: Exception) {
                 callback.onFailure(e.message)
             }
