@@ -9,5 +9,6 @@ data class Snippet(
     val id: Int = 0,
     val label: String,
     val value: String,
-    val category: String
+    val category: String,
+    val targetPackage: String? = null
 )

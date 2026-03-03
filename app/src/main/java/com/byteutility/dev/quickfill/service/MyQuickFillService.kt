@@ -76,7 +76,7 @@ class MyQuickFillService : AutofillService() {
                     detectCategory(appInfo, appInfo.packageName)
                 }.getOrDefault("GENERAL")
 
-                val snippets = getSnippetsForCategory(category)
+                val snippets = getSnippetsForPackage(packageName)
 
                 val datasets = if (snippets.isEmpty()) {
                     listOf(buildAddSnippetDataset(packageName, fillId, request))
@@ -225,6 +225,13 @@ class MyQuickFillService : AutofillService() {
             val specific = snippetDao.getSnippetsByCategory(category).first()
             val general = snippetDao.getSnippetsByCategory("GENERAL").first()
             (specific + general).distinctBy { it.id }
+        }
+    }
+
+    private suspend fun getSnippetsForPackage(p: String): List<Snippet> {
+        return withContext(Dispatchers.IO) {
+            val specific = snippetDao.getSnippetsForPackage(p).first()
+            (specific).distinctBy { it.id }
         }
     }
 

@@ -1,5 +1,8 @@
 package com.byteutility.dev.quickfill.ui.snippets
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.byteutility.dev.quickfill.data.local.Snippet
@@ -16,6 +19,8 @@ class SnippetViewModel @Inject constructor(
     private val snippetDao: SnippetDao
 ) : ViewModel() {
 
+    var targetPackage by mutableStateOf<String?>(null)
+
     val allSnippets: StateFlow<List<Snippet>> = snippetDao.getAllSnippets()
         .stateIn(
             scope = viewModelScope,
@@ -23,25 +28,28 @@ class SnippetViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    fun saveSnippet(content: String, category: String) {}
-
     /**
      * Creates and saves a snippet.
      * @param label: Friendly name (e.g., "Personal Email")
      * @param value: The actual text (e.g., "me@example.com")
      * @param category: Filter tag (e.g., "Social", "Work")
      */
-    fun saveSnippet(label: String, value: String, category: String) {
+    fun saveSnippet(label: String, value: String, category: String, packageName: String? = null) {
         if (label.isBlank() || value.isBlank()) return
 
         viewModelScope.launch {
             val snippet = Snippet(
                 label = label.trim(),
                 value = value.trim(),
-                category = category
+                category = category,
+                targetPackage = packageName
             )
             snippetDao.insertSnippet(snippet)
         }
+    }
+
+    fun setInitialPackage(packageName: String?) {
+        targetPackage = packageName
     }
 
     fun deleteSnippet(snippet: Snippet) {

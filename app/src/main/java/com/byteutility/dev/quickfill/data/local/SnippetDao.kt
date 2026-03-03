@@ -15,6 +15,9 @@ interface SnippetDao {
     @Query("SELECT * FROM snippets WHERE category = :category")
     fun getSnippetsByCategory(category: String): Flow<List<Snippet>>
 
+    @Query("SELECT * FROM snippets WHERE targetPackage = :packageName")
+    fun getSnippetsForPackage(packageName: String): Flow<List<Snippet>>
+
     @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun insertSnippet(snippet: Snippet)
 

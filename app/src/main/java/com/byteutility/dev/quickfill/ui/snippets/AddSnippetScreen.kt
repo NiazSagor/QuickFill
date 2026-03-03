@@ -2,6 +2,7 @@ package com.byteutility.dev.quickfill.ui.snippets
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -24,19 +28,26 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSnippetScreen(
     viewModel: SnippetViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    targetPackage: String?
 ) {
+    LaunchedEffect(targetPackage) {
+        viewModel.setInitialPackage(targetPackage)
+    }
     var label by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("GENERAL") }
@@ -102,6 +113,36 @@ fun AddSnippetScreen(
                 minLines = 3
             )
 
+            viewModel.targetPackage?.let { pkg ->
+                val context = LocalContext.current
+                val appName = remember(pkg) {
+                    runCatching {
+                        context.packageManager.getApplicationLabel(
+                            context.packageManager.getApplicationInfo(pkg, 0)
+                        ).toString()
+                    }.getOrDefault(pkg)
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "This snippet will be pinned to: $appName",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
             // 3. Category Selection (Dropdown)
             ExposedDropdownMenuBox(
                 expanded = isExpanded,
@@ -139,7 +180,7 @@ fun AddSnippetScreen(
             Button(
                 onClick = {
                     if (label.isNotBlank() && value.isNotBlank()) {
-                        viewModel.saveSnippet(label, value, category)
+                        viewModel.saveSnippet(label, value, category, targetPackage)
                         onBack() // Navigate back after saving
                     }
                 },

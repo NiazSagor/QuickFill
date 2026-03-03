@@ -4,22 +4,25 @@ import android.content.Context
 import android.view.autofill.AutofillManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
 import com.byteutility.dev.quickfill.ui.setup.QuickFillSetupScreen
+import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
 import com.byteutility.dev.quickfill.ui.snippets.SnippetListScreen
 import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
 
 @Composable
-fun QuickFillApp(viewModel: SnippetViewModel = viewModel()) {
+fun QuickFillApp(
+    viewModel: SnippetViewModel = viewModel(),
+    targetPackage: String?
+) {
     val context = LocalContext.current
 
     // Track the enabled state
@@ -44,8 +47,10 @@ fun QuickFillApp(viewModel: SnippetViewModel = viewModel()) {
                 viewModel = viewModel,
                 onAddClick = { currentScreen = "ADD" }
             )
+
             "ADD" -> AddSnippetScreen(
                 viewModel = viewModel,
+                targetPackage = targetPackage,
                 onBack = { currentScreen = "LIST" }
             )
         }
