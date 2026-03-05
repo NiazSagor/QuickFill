@@ -1,10 +1,11 @@
 package com.byteutility.dev.quickfill.service
 
-import android.R
+
 import android.app.PendingIntent
 import android.app.assist.AssistStructure
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
 import android.os.Build
 import android.os.CancellationSignal
 import android.service.autofill.AutofillService
@@ -24,6 +25,8 @@ import android.view.inputmethod.InlineSuggestionsRequest
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import androidx.autofill.inline.v1.InlineSuggestionUi
+import androidx.core.graphics.drawable.toBitmap
+import com.byteutility.dev.quickfill.R
 import com.byteutility.dev.quickfill.data.local.Snippet
 import com.byteutility.dev.quickfill.data.local.SnippetDao
 import com.byteutility.dev.quickfill.ui.AutofillTrampolineActivity
@@ -102,21 +105,31 @@ class MyQuickFillService : AutofillService() {
     ) {
     }
 
+    private fun getAppIcon(packageName: String): Bitmap? {
+        return runCatching {
+            val drawable = packageManager.getApplicationIcon(packageName)
+            drawable.toBitmap() // requires androidx.core.graphics.drawable.toBitmap
+        }.getOrNull()
+    }
+
     private fun buildAddSnippetDataset(
         packageName: String,
         fillId: AutofillId,
         request: FillRequest
     ): Dataset {
+        val appLabel = packageName.split(".").last()
+        val appIcon = getAppIcon(packageName) // Fetch the icon here
+
         val addSnippet = Snippet(
             id = -1,
-            label = "➕ Add for ${packageName.split(".").last()}",
+            label = "Add for $appLabel",
             value = "ACTION_ADD_SNIPPET::$packageName",
             category = "GENERAL"
         )
 
         val pendingIntent = buildTrampolinePendingIntent(packageName, addSnippet.id.hashCode())
 
-        val presentations = buildPresentations(addSnippet, request, pendingIntent)
+        val presentations = buildPresentations(addSnippet, request, pendingIntent, appIcon)
 
         val field = Field.Builder()
             .setValue(AutofillValue.forText(addSnippet.value))
@@ -134,7 +147,7 @@ class MyQuickFillService : AutofillService() {
         fillId: AutofillId,
         request: FillRequest
     ): Dataset {
-        val presentations = buildPresentations(snippet, request, pendingIntent = null)
+        val presentations = buildPresentations(snippet, request, pendingIntent = null, null)
 
         val field = Field.Builder()
             .setValue(AutofillValue.forText(snippet.value))
@@ -149,11 +162,24 @@ class MyQuickFillService : AutofillService() {
     private fun buildPresentations(
         snippet: Snippet,
         request: FillRequest,
-        pendingIntent: PendingIntent?
+        pendingIntent: PendingIntent?,
+        appIcon: Bitmap?
     ): Presentations {
-        val menuPresentation = RemoteViews(packageName, R.layout.simple_list_item_1).apply {
-            setTextViewText(R.id.text1, snippet.label)
+
+        val menuPresentation = if (appIcon != null) {
+            RemoteViews(this@MyQuickFillService.packageName, R.layout.autofill_item).apply {
+                setTextViewText(R.id.autofill_text, snippet.label)
+                setImageViewBitmap(R.id.autofill_icon, appIcon)
+            }
+        } else {
+            RemoteViews(
+                this@MyQuickFillService.packageName,
+                android.R.layout.simple_list_item_1
+            ).apply {
+                setTextViewText(android.R.id.text1, snippet.label)
+            }
         }
+
 
         val presBuilder = Presentations.Builder()
             .setMenuPresentation(menuPresentation)
