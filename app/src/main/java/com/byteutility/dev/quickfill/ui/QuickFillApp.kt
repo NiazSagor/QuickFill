@@ -1,15 +1,15 @@
 package com.byteutility.dev.quickfill.ui
 
 import android.content.Context
+import android.util.Log
 import android.view.autofill.AutofillManager
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.byteutility.dev.quickfill.ui.setup.QuickFillSetupScreen
 import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
@@ -43,12 +43,10 @@ fun QuickFillApp(
         )
     }
 
-    // Re-check when coming back to foreground
-    LaunchedEffect(Unit) {
-        snapshotFlow { isAutofillServiceEnabled(context) }
-            .collect { isEnabled = it }
+    LifecycleResumeEffect(Unit) {
+        isEnabled = isAutofillServiceEnabled(context)
+        onPauseOrDispose { }
     }
-
     when {
         !isEnabled -> {
             QuickFillSetupScreen()
