@@ -3,51 +3,72 @@ package com.byteutility.dev.quickfill.ui
 import android.content.Context
 import android.view.autofill.AutofillManager
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
 import com.byteutility.dev.quickfill.ui.setup.QuickFillSetupScreen
+import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
 import com.byteutility.dev.quickfill.ui.snippets.SnippetListScreen
 import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
 
+sealed class Screen {
+    object Setup : Screen()
+    object List : Screen()
+    object Add : Screen()
+}
+
 @Composable
-fun QuickFillApp(viewModel: SnippetViewModel = viewModel()) {
+fun QuickFillApp(
+    targetPackage: String?,
+    viewModel: SnippetViewModel = viewModel()
+) {
     val context = LocalContext.current
 
-    // Track the enabled state
-    var isEnabled by remember { mutableStateOf(isAutofillServiceEnabled(context)) }
-    var currentScreen by remember { mutableStateOf("LIST") }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                isEnabled = isAutofillServiceEnabled(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    var isEnabled by remember {
+        mutableStateOf(isAutofillServiceEnabled(context))
     }
 
-    if (!isEnabled) {
-        QuickFillSetupScreen()
-    } else {
-        when (currentScreen) {
-            "LIST" -> SnippetListScreen(
-                viewModel = viewModel,
-                onAddClick = { currentScreen = "ADD" }
-            )
-            "ADD" -> AddSnippetScreen(
-                viewModel = viewModel,
-                onBack = { currentScreen = "LIST" }
-            )
+    var currentScreen by remember(targetPackage, isEnabled) {
+        mutableStateOf(
+            when {
+                !isEnabled -> Screen.Setup
+                targetPackage != null -> Screen.Add
+                else -> Screen.List
+            }
+        )
+    }
+
+    // Re-check when coming back to foreground
+    LaunchedEffect(Unit) {
+        snapshotFlow { isAutofillServiceEnabled(context) }
+            .collect { isEnabled = it }
+    }
+
+    when {
+        !isEnabled -> {
+            QuickFillSetupScreen()
+        }
+
+        else -> {
+            when (currentScreen) {
+                Screen.List -> SnippetListScreen(
+                    viewModel = viewModel,
+                    onAddClick = { currentScreen = Screen.Add }
+                )
+
+                Screen.Add -> AddSnippetScreen(
+                    viewModel = viewModel,
+                    targetPackage = targetPackage,
+                    onBack = { currentScreen = Screen.List }
+                )
+
+                Screen.Setup -> QuickFillSetupScreen()
+            }
         }
     }
 }
