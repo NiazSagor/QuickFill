@@ -1,18 +1,18 @@
 package com.byteutility.dev.quickfill.ui.snippets
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,8 +35,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +47,8 @@ fun AddSnippetScreen(
     onBack: () -> Unit,
     targetPackage: String?
 ) {
+    val isAppSpecific = viewModel.targetPackage != null
+
     LaunchedEffect(targetPackage) {
         viewModel.setInitialPackage(targetPackage)
     }
@@ -89,11 +93,19 @@ fun AddSnippetScreen(
         // Content of the screen
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(padding)
+                .padding(start = 16.dp, bottom = 16.dp, end = 16.dp)
         ) {
-            Text(text = "Add New Snippet", style = MaterialTheme.typography.headlineMedium)
+            if (isAppSpecific) {
+                AppSpecificHeader(viewModel.targetPackage!!)
+
+                Text(
+                    text = "This snippet will only appear when you are using this specific app. It will take priority over your general snippets.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
 
             // 1. Label Input
             OutlinedTextField(
@@ -113,63 +125,35 @@ fun AddSnippetScreen(
                 minLines = 3
             )
 
-            viewModel.targetPackage?.let { pkg ->
-                val context = LocalContext.current
-                val appName = remember(pkg) {
-                    runCatching {
-                        context.packageManager.getApplicationLabel(
-                            context.packageManager.getApplicationInfo(pkg, 0)
-                        ).toString()
-                    }.getOrDefault(pkg)
-                }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "This snippet will be pinned to: $appName",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-
-            // 3. Category Selection (Dropdown)
-            ExposedDropdownMenuBox(
-                expanded = isExpanded,
-                onExpandedChange = { isExpanded = !isExpanded }
-            ) {
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Category") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth()
-                )
-                ExposedDropdownMenu(
+            if (!isAppSpecific) {
+                // 3. Category Selection (Dropdown)
+                ExposedDropdownMenuBox(
                     expanded = isExpanded,
-                    onDismissRequest = { isExpanded = false }
+                    onExpandedChange = { isExpanded = !isExpanded }
                 ) {
-                    categories.forEach { selection ->
-                        DropdownMenuItem(
-                            text = { Text(selection) },
-                            onClick = {
-                                category = selection
-                                isExpanded = false
-                            }
-                        )
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = isExpanded,
+                        onDismissRequest = { isExpanded = false }
+                    ) {
+                        categories.forEach { selection ->
+                            DropdownMenuItem(
+                                text = { Text(selection) },
+                                onClick = {
+                                    category = selection
+                                    isExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -193,6 +177,43 @@ fun AddSnippetScreen(
             }
         }
     }
+}
 
+@Composable
+fun AppSpecificHeader(packageName: String) {
+    val context = LocalContext.current
+    val (appLabel, appIcon) = remember(packageName) {
+        runCatching {
+            val pm = context.packageManager
+            val info = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(info).toString() to pm.getApplicationIcon(info)
+        }.getOrDefault(packageName.split(".").last() to null)
+    }
 
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (appIcon != null) {
+                Image(
+                    bitmap = appIcon.toBitmap().asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp)
+                )
+            } else {
+                Icon(Icons.Default.Settings, contentDescription = null)
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column {
+                Text(appLabel, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
 }
