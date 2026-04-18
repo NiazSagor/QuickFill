@@ -31,4 +31,15 @@ interface SnippetDao {
 
     @Delete
     suspend fun deleteSnippet(snippet: Snippet)
+
+    // --- App Metadata ---
+
+    @Query("SELECT * FROM app_metadata WHERE packageName = :packageName")
+    suspend fun getAppMetadata(packageName: String): AppMetadata?
+
+    @Query("SELECT * FROM app_metadata WHERE packageName = :packageName")
+    fun getAppMetadataStream(packageName: String): Flow<AppMetadata?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppMetadata(metadata: AppMetadata)
 }

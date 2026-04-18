@@ -78,6 +78,9 @@ class SnippetViewModel @Inject constructor(
         _targetPackage.value = packageName
     }
 
+    fun getAppMetadata(packageName: String) = 
+        snippetRepository.getAppMetadataStream(packageName)
+
     fun deleteSnippet(snippet: Snippet) {
         viewModelScope.launch {
             snippetRepository.deleteSnippet(snippet)

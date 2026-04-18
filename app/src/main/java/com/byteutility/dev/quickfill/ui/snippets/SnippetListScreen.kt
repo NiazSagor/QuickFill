@@ -99,6 +99,7 @@ fun SnippetListScreen(
                         ) { snippet ->
                             SnippetCard(
                                 snippet = snippet,
+                                viewModel = viewModel,
                                 onDelete = { viewModel.deleteSnippet(snippet) }
                             )
                         }
@@ -115,7 +116,7 @@ fun SnippetListScreen(
 }
 
 @Composable
-fun SnippetCard(snippet: Snippet, onDelete: () -> Unit) {
+fun SnippetCard(snippet: Snippet, viewModel: SnippetViewModel, onDelete: () -> Unit) {
     val isAppSpecific = !snippet.targetPackage.isNullOrBlank()
     Card(
         modifier = Modifier
@@ -136,7 +137,11 @@ fun SnippetCard(snippet: Snippet, onDelete: () -> Unit) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            LeadingSnippetIcon(snippet)
+            com.byteutility.dev.quickfill.ui.common.PersistentAppIcon(
+                packageName = snippet.targetPackage,
+                category = snippet.category,
+                viewModel = viewModel
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 

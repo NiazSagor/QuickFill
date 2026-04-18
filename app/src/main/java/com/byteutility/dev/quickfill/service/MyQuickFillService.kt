@@ -74,6 +74,9 @@ class MyQuickFillService : AutofillService() {
 
         serviceScope.launch {
             try {
+                // ARCHITECTURAL DECISION: Save metadata here because we have visibility.
+                snippetRepository.saveAppMetadataFromSystem(packageName)
+
                 val category = runCatching {
                     val appInfo = packageManager.getApplicationInfo(packageName, 0)
                     detectCategory(appInfo, appInfo.packageName)
