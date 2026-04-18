@@ -17,7 +17,8 @@ sealed interface SnippetsUiState {
     object Loading : SnippetsUiState
     data class Success(
         val snippets: List<Snippet>,
-        val targetPackage: String? = null
+        val targetPackage: String? = null,
+        val knownPackages: List<String> = emptyList()
     ) : SnippetsUiState
     data class Error(val message: String) : SnippetsUiState
 }
@@ -29,12 +30,20 @@ class SnippetViewModel @Inject constructor(
 
     private val _targetPackage = MutableStateFlow<String?>(null)
 
+    /**
+     * ARCHITECTURAL DECISION: Using 'combine' ensures the UI always has a consistent snapshot 
+     * of all required data (snippets, selected package, and known apps) simultaneously.
+     * This prevents "race conditions" where the UI might show a selected package that 
+     * hasn't been validated against the known packages list yet.
+     */
     val uiState: StateFlow<SnippetsUiState> = combine(
         snippetRepository.getSnippetsStream(),
+        snippetRepository.getKnownPackagesStream(),
         _targetPackage
-    ) { snippets, targetPackage ->
+    ) { snippets, knownPackages, targetPackage ->
         SnippetsUiState.Success(
             snippets = snippets,
+            knownPackages = knownPackages,
             targetPackage = targetPackage
         )
     }.stateIn(
@@ -58,6 +67,14 @@ class SnippetViewModel @Inject constructor(
     }
 
     fun setInitialPackage(packageName: String?) {
+        _targetPackage.value = packageName
+    }
+
+    /**
+     * Updates the package associated with the new snippet.
+     * Called when the user manually selects an app from the "Known Apps" list.
+     */
+    fun updateSelectedPackage(packageName: String?) {
         _targetPackage.value = packageName
     }
 

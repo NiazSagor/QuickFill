@@ -19,6 +19,13 @@ interface SnippetDao {
     @Query("SELECT * FROM snippets WHERE targetPackage = :packageName ORDER BY label ASC")
     fun getSnippetsForPackageStream(packageName: String): Flow<List<Snippet>>
 
+    /**
+     * PERFORMANCE DECISION: Using DISTINCT in the database is significantly more 
+     * efficient than fetching all snippets and filtering in memory (Kotlin).
+     */
+    @Query("SELECT DISTINCT targetPackage FROM snippets WHERE targetPackage IS NOT NULL")
+    fun getKnownPackagesStream(): Flow<List<String>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSnippet(snippet: Snippet)
 
