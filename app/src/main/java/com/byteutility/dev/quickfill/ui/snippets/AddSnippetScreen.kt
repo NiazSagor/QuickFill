@@ -40,6 +40,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSnippetScreen(
@@ -47,7 +49,7 @@ fun AddSnippetScreen(
     onBack: () -> Unit,
     targetPackage: String?
 ) {
-    val isAppSpecific = viewModel.targetPackage != null
+    val isAppSpecific = targetPackage != null
 
     LaunchedEffect(targetPackage) {
         viewModel.setInitialPackage(targetPackage)
@@ -97,7 +99,7 @@ fun AddSnippetScreen(
                 .padding(start = 16.dp, bottom = 16.dp, end = 16.dp)
         ) {
             if (isAppSpecific) {
-                AppSpecificHeader(viewModel.targetPackage!!)
+                AppSpecificHeader(targetPackage!!)
 
                 Text(
                     text = "This snippet will only appear when you are using this specific app. It will take priority over your general snippets.",

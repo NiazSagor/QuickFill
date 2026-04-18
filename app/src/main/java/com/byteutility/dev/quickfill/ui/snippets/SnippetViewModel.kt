@@ -1,39 +1,48 @@
 package com.byteutility.dev.quickfill.ui.snippets
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.byteutility.dev.quickfill.data.local.Snippet
-import com.byteutility.dev.quickfill.data.local.SnippetDao
+import com.byteutility.dev.quickfill.data.repository.SnippetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+sealed interface SnippetsUiState {
+    object Loading : SnippetsUiState
+    data class Success(
+        val snippets: List<Snippet>,
+        val targetPackage: String? = null
+    ) : SnippetsUiState
+    data class Error(val message: String) : SnippetsUiState
+}
+
 @HiltViewModel
 class SnippetViewModel @Inject constructor(
-    private val snippetDao: SnippetDao
+    private val snippetRepository: SnippetRepository
 ) : ViewModel() {
 
-    var targetPackage by mutableStateOf<String?>(null)
+    private val _targetPackage = MutableStateFlow<String?>(null)
 
-    val allSnippets: StateFlow<List<Snippet>> = snippetDao.getAllSnippets()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Companion.WhileSubscribed(5000),
-            initialValue = emptyList()
+    val uiState: StateFlow<SnippetsUiState> = combine(
+        snippetRepository.getSnippetsStream(),
+        _targetPackage
+    ) { snippets, targetPackage ->
+        SnippetsUiState.Success(
+            snippets = snippets,
+            targetPackage = targetPackage
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SnippetsUiState.Loading
+    )
 
-    /**
-     * Creates and saves a snippet.
-     * @param label: Friendly name (e.g., "Personal Email")
-     * @param value: The actual text (e.g., "me@example.com")
-     * @param category: Filter tag (e.g., "Social", "Work")
-     */
     fun saveSnippet(label: String, value: String, category: String, packageName: String? = null) {
         if (label.isBlank() || value.isBlank()) return
 
@@ -44,17 +53,17 @@ class SnippetViewModel @Inject constructor(
                 category = category,
                 targetPackage = packageName
             )
-            snippetDao.insertSnippet(snippet)
+            snippetRepository.insertSnippet(snippet)
         }
     }
 
     fun setInitialPackage(packageName: String?) {
-        targetPackage = packageName
+        _targetPackage.value = packageName
     }
 
     fun deleteSnippet(snippet: Snippet) {
         viewModelScope.launch {
-            snippetDao.deleteSnippet(snippet)
+            snippetRepository.deleteSnippet(snippet)
         }
     }
 }

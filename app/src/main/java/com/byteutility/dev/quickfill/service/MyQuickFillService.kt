@@ -28,7 +28,7 @@ import androidx.autofill.inline.v1.InlineSuggestionUi
 import androidx.core.graphics.drawable.toBitmap
 import com.byteutility.dev.quickfill.R
 import com.byteutility.dev.quickfill.data.local.Snippet
-import com.byteutility.dev.quickfill.data.local.SnippetDao
+import com.byteutility.dev.quickfill.data.repository.SnippetRepository
 import com.byteutility.dev.quickfill.ui.AutofillTrampolineActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +46,7 @@ private const val TAG = "MyQuickFillService"
 class MyQuickFillService : AutofillService() {
 
     @Inject
-    lateinit var snippetDao: SnippetDao
+    lateinit var snippetRepository: SnippetRepository
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -248,15 +248,15 @@ class MyQuickFillService : AutofillService() {
 
     private suspend fun getSnippetsForCategory(category: String): List<Snippet> {
         return withContext(Dispatchers.IO) {
-            val specific = snippetDao.getSnippetsByCategory(category).first()
-            val general = snippetDao.getSnippetsByCategory("GENERAL").first()
+            val specific = snippetRepository.getSnippetsByCategoryStream(category).first()
+            val general = snippetRepository.getSnippetsByCategoryStream("GENERAL").first()
             (specific + general).distinctBy { it.id }
         }
     }
 
     private suspend fun getSnippetsForPackage(p: String): List<Snippet> {
         return withContext(Dispatchers.IO) {
-            val specific = snippetDao.getSnippetsForPackage(p).first()
+            val specific = snippetRepository.getSnippetsForPackageStream(p).first()
             (specific).distinctBy { it.id }
         }
     }

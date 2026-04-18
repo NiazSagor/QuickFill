@@ -9,16 +9,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SnippetDao {
-    @Query("SELECT * FROM snippets ORDER BY id DESC")
-    fun getAllSnippets(): Flow<List<Snippet>>
 
-    @Query("SELECT * FROM snippets WHERE category = :category")
-    fun getSnippetsByCategory(category: String): Flow<List<Snippet>>
+    @Query("SELECT * FROM snippets ORDER BY label ASC")
+    fun getSnippetsStream(): Flow<List<Snippet>>
 
-    @Query("SELECT * FROM snippets WHERE targetPackage = :packageName")
-    fun getSnippetsForPackage(packageName: String): Flow<List<Snippet>>
+    @Query("SELECT * FROM snippets WHERE category = :category ORDER BY label ASC")
+    fun getSnippetsByCategoryStream(category: String): Flow<List<Snippet>>
 
-    @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
+    @Query("SELECT * FROM snippets WHERE targetPackage = :packageName ORDER BY label ASC")
+    fun getSnippetsForPackageStream(packageName: String): Flow<List<Snippet>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSnippet(snippet: Snippet)
 
     @Delete
