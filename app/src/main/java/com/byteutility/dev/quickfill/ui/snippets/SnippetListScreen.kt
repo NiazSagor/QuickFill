@@ -65,7 +65,7 @@ fun SnippetListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("My Data Vault") })
+            TopAppBar(title = { Text("QuickFill") })
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
