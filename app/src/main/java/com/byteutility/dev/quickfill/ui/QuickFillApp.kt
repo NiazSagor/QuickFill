@@ -1,6 +1,7 @@
 package com.byteutility.dev.quickfill.ui
 
 import android.content.Context
+import android.util.Log
 import android.view.autofill.AutofillManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,7 +25,18 @@ import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
 object Dest {
     const val SETUP = "setup"
     const val SNIPPET_LIST = "snippet_list"
-    const val ADD_SNIPPET = "add_snippet?targetPackage={targetPackage}"
+
+    private const val ADD_SNIPPET_BASE = "add_snippet"
+    const val ADD_SNIPPET = "$ADD_SNIPPET_BASE?targetPackage={targetPackage}"
+
+    // Use this function to navigate instead of the constant
+    fun passTargetPackage(pkg: String? = null): String {
+        return if (pkg != null) {
+            "$ADD_SNIPPET_BASE?targetPackage=$pkg"
+        } else {
+            ADD_SNIPPET_BASE
+        }
+    }
 }
 
 @Composable
@@ -65,7 +77,7 @@ fun QuickFillApp(
         composable(Dest.SNIPPET_LIST) {
             SnippetListScreen(
                 viewModel = viewModel,
-                onAddClick = { navController.navigate(Dest.ADD_SNIPPET) }
+                onAddClick = { navController.navigate(Dest.passTargetPackage()) }
             )
         }
 

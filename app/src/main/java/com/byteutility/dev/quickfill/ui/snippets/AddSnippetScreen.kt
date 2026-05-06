@@ -1,10 +1,12 @@
 package com.byteutility.dev.quickfill.ui.snippets
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,10 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -41,13 +46,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+private const val TAG = "AddSnippetScreen"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSnippetScreen(
@@ -56,30 +62,34 @@ fun AddSnippetScreen(
     targetPackage: String?
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
-    // NAVIGATION LOGIC: If a package is passed via navigation, it's an "Autofill" flow
-    // which takes precedence and locks the scope.
     val isFromAutofill = targetPackage != null
 
-    LaunchedEffect(targetPackage) {
-        viewModel.setInitialPackage(targetPackage)
-    }
-
+    // Local UI state for form inputs
     var label by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("GENERAL") }
     var categoryExpanded by remember { mutableStateOf(false) }
     var appExpanded by remember { mutableStateOf(false) }
+    
+    // Initialized to true if from autofill, else false (Global)
+    var isAppPinned by remember { mutableStateOf(isFromAutofill) }
 
     val categories = listOf("GENERAL", "SOCIAL", "FINANCE", "WORK", "IDENTITY", "GAME")
+
+    LaunchedEffect(targetPackage) {
+        viewModel.setInitialPackage(targetPackage)
+        if (isFromAutofill) {
+            isAppPinned = true
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add New Snippet") },
+                title = { Text("New Snippet", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 }
             )
@@ -88,56 +98,71 @@ fun AddSnippetScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(16.dp)
+                .padding(20.dp)
+                .fillMaxSize()
         ) {
             when (val state = uiState) {
-                is SnippetsUiState.Loading -> { /* Handled by parent or show placeholder */ }
                 is SnippetsUiState.Success -> {
-                    
-                    // ARCHITECTURAL DECISION: We allow the user to toggle scope only if not 
-                    // in the middle of an Autofill flow.
-                    if (!isFromAutofill) {
-                        Text("Scope", style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(8.dp))
-                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            SegmentedButton(
-                                selected = state.targetPackage == null,
-                                onClick = { viewModel.updateSelectedPackage(null) },
-                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                            ) { Text("General") }
-                            SegmentedButton(
-                                selected = state.targetPackage != null,
-                                onClick = { 
-                                    // Default to first known app if available when switching to app-specific
-                                    if (state.targetPackage == null && state.knownPackages.isNotEmpty()) {
-                                        viewModel.updateSelectedPackage(state.knownPackages.first())
-                                    }
-                                },
-                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                            ) { Text("App Specific") }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                    }
 
-                    // App Selection UI
-                    AnimatedVisibility(visible = state.targetPackage != null) {
+                    // --- SCOPE SELECTION ---
+                    Text(
+                        "Availability",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = !isAppPinned,
+                            onClick = {
+                                isAppPinned = false
+                                viewModel.updateSelectedPackage(null)
+                            },
+                            enabled = !isFromAutofill, // Disable Global if coming from specific app
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = { Icon(Icons.Default.Build, null, Modifier.size(18.dp)) }
+                        ) { Text("Global") }
+                        SegmentedButton(
+                            selected = isAppPinned,
+                            onClick = {
+                                isAppPinned = true
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = { Icon(Icons.Default.Star, null, Modifier.size(18.dp)) }
+                        ) { Text("App-Pinned") }
+                    }
+                    Spacer(Modifier.height(24.dp))
+
+                    // --- APP PICKER OR HEADER (Only for App-Pinned) ---
+                    if (isAppPinned) {
                         Column {
-                            if (!isFromAutofill && state.knownPackages.isNotEmpty()) {
+                            if (!isFromAutofill) {
                                 ExposedDropdownMenuBox(
                                     expanded = appExpanded,
                                     onExpandedChange = { appExpanded = !appExpanded }
                                 ) {
+                                    val selectedPkg = state.targetPackage
                                     OutlinedTextField(
-                                        value = getAppLabel(state.targetPackage!!),
+                                        value = if (selectedPkg != null) getAppLabel(selectedPkg) else "Select App",
                                         onValueChange = {},
                                         readOnly = true,
-                                        label = { Text("Select App") },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(appExpanded) },
-                                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                                        label = { Text("Target App") },
+                                        trailingIcon = {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                                appExpanded
+                                            )
+                                        },
+                                        modifier = Modifier
+                                            .menuAnchor()
+                                            .fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
                                     )
+                                    
                                     ExposedDropdownMenu(
                                         expanded = appExpanded,
-                                        onDismissRequest = { appExpanded = false }
+                                        onDismissRequest = {
+                                            appExpanded = false
+                                        }
                                     ) {
                                         state.knownPackages.forEach { pkg ->
                                             DropdownMenuItem(
@@ -151,68 +176,100 @@ fun AddSnippetScreen(
                                     }
                                 }
                             } else {
-                                AppSpecificHeader(state.targetPackage ?: "")
+                                // Locked Header when from Autofill
+                                AppSpecificHeader(targetPackage ?: "")
                             }
-                            
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Info, null, modifier = Modifier.size(16.dp), tint = Color.Gray)
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    "App-specific snippets take priority.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
-                                )
+
+                            // Info Card
+                            Card(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "This snippet will automatically pop up only in ${
+                                            getAppLabel(
+                                                state.targetPackage ?: "the selected app"
+                                            )
+                                        }.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(12.dp))
                         }
                     }
 
+                    // --- INPUT FIELDS ---
                     OutlinedTextField(
                         value = label,
                         onValueChange = { label = it },
-                        label = { Text("Label (e.g., My Email)") },
+                        label = { Text("Label") },
+                        placeholder = { Text("e.g. Work Email") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = { value = it },
-                        label = { Text("Value") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2
+                        shape = RoundedCornerShape(12.dp)
                     )
 
                     Spacer(Modifier.height(16.dp))
 
-                    if (state.targetPackage == null) {
-                        ExposedDropdownMenuBox(
-                            expanded = categoryExpanded,
-                            onExpandedChange = { categoryExpanded = !categoryExpanded }
-                        ) {
-                            OutlinedTextField(
-                                value = category,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Category") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(categoryExpanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                            )
-                            ExposedDropdownMenu(
+                    OutlinedTextField(
+                        value = value,
+                        onValueChange = { value = it },
+                        label = { Text("Value / Content") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    // --- CATEGORY (Only show for Global) ---
+                    if (!isAppPinned) {
+                        Column {
+                            Spacer(Modifier.height(16.dp))
+                            ExposedDropdownMenuBox(
                                 expanded = categoryExpanded,
-                                onDismissRequest = { categoryExpanded = false }
+                                onExpandedChange = { categoryExpanded = !categoryExpanded }
                             ) {
-                                categories.forEach { sel ->
-                                    DropdownMenuItem(
-                                        text = { Text(sel) },
-                                        onClick = {
-                                            category = sel
-                                            categoryExpanded = false
-                                        }
-                                    )
+                                OutlinedTextField(
+                                    value = category,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Category") },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(
+                                            categoryExpanded
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = categoryExpanded,
+                                    onDismissRequest = { categoryExpanded = false }
+                                ) {
+                                    categories.forEach { sel ->
+                                        DropdownMenuItem(
+                                            text = { Text(sel) },
+                                            onClick = {
+                                                category = sel
+                                                categoryExpanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -223,19 +280,32 @@ fun AddSnippetScreen(
                     Button(
                         onClick = {
                             if (label.isNotBlank() && value.isNotBlank()) {
-                                viewModel.saveSnippet(label, value, category, state.targetPackage)
+                                // Decide category internally if it's app-specific
+                                val finalCategory = if (isAppPinned) "APP_SPECIFIC" else category
+                                val finalPackage = if (isAppPinned) state.targetPackage else null
+                                
+                                viewModel.saveSnippet(
+                                    label,
+                                    value,
+                                    finalCategory,
+                                    finalPackage
+                                )
                                 onBack()
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                     ) {
-                        Icon(Icons.Default.Check, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Save to Vault")
+                        Icon(Icons.Default.Done, null)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Save to Vault", style = MaterialTheme.typography.titleMedium)
                     }
                 }
-                is SnippetsUiState.Error -> { /* Show error UI */ }
+
+                else -> { /* Handle Loading/Error */ }
             }
         }
     }
@@ -271,7 +341,11 @@ fun AppSpecificHeader(packageName: String) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (appIcon != null) {
-                Image(bitmap = appIcon.toBitmap().asImageBitmap(), contentDescription = null, modifier = Modifier.size(32.dp))
+                Image(
+                    bitmap = appIcon.toBitmap().asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp)
+                )
             } else {
                 Icon(Icons.Default.Settings, contentDescription = null)
             }
