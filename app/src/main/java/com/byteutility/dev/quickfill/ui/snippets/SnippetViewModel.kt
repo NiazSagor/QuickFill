@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -31,6 +32,9 @@ class SnippetViewModel @Inject constructor(
 
     private val _targetPackage = MutableStateFlow<String?>(null)
     private val _editingSnippet = MutableStateFlow<Snippet?>(null)
+    private val _isDarkMode = MutableStateFlow<Boolean?>(null) // null means follow system
+
+    val isDarkMode: StateFlow<Boolean?> = _isDarkMode.asStateFlow()
 
     /**
      * ARCHITECTURAL DECISION: Using 'combine' ensures the UI always has a consistent snapshot 
@@ -110,5 +114,9 @@ class SnippetViewModel @Inject constructor(
         viewModelScope.launch {
             snippetRepository.deleteSnippet(snippet)
         }
+    }
+
+    fun toggleDarkMode(currentIsDark: Boolean) {
+        _isDarkMode.value = !currentIsDark
     }
 }
