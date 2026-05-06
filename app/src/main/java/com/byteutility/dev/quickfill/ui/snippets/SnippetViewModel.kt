@@ -18,7 +18,8 @@ sealed interface SnippetsUiState {
     data class Success(
         val snippets: List<Snippet>,
         val targetPackage: String? = null,
-        val knownPackages: List<String> = emptyList()
+        val knownPackages: List<String> = emptyList(),
+        val editingSnippet: Snippet? = null
     ) : SnippetsUiState
     data class Error(val message: String) : SnippetsUiState
 }
@@ -29,6 +30,7 @@ class SnippetViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _targetPackage = MutableStateFlow<String?>(null)
+    private val _editingSnippet = MutableStateFlow<Snippet?>(null)
 
     /**
      * ARCHITECTURAL DECISION: Using 'combine' ensures the UI always has a consistent snapshot 
@@ -39,12 +41,14 @@ class SnippetViewModel @Inject constructor(
     val uiState: StateFlow<SnippetsUiState> = combine(
         snippetRepository.getSnippetsStream(),
         snippetRepository.getKnownPackagesStream(),
-        _targetPackage
-    ) { snippets, knownPackages, targetPackage ->
+        _targetPackage,
+        _editingSnippet
+    ) { snippets, knownPackages, targetPackage, editingSnippet ->
         SnippetsUiState.Success(
             snippets = snippets,
             knownPackages = knownPackages,
-            targetPackage = targetPackage
+            targetPackage = targetPackage,
+            editingSnippet = editingSnippet
         )
     }.stateIn(
         scope = viewModelScope,
@@ -52,11 +56,18 @@ class SnippetViewModel @Inject constructor(
         initialValue = SnippetsUiState.Loading
     )
 
-    fun saveSnippet(label: String, value: String, category: String, packageName: String? = null) {
+    fun saveSnippet(
+        label: String,
+        value: String,
+        category: String,
+        packageName: String? = null,
+        id: Int = 0
+    ) {
         if (label.isBlank() || value.isBlank()) return
 
         viewModelScope.launch {
             val snippet = Snippet(
+                id = id,
                 label = label.trim(),
                 value = value.trim(),
                 category = category,
@@ -68,6 +79,20 @@ class SnippetViewModel @Inject constructor(
 
     fun setInitialPackage(packageName: String?) {
         _targetPackage.value = packageName
+    }
+
+    fun loadSnippetForEditing(id: Int) {
+        viewModelScope.launch {
+            val snippet = snippetRepository.getSnippetById(id)
+            _editingSnippet.value = snippet
+            // Also sync the target package so the UI tabs/pickers show the right info
+            _targetPackage.value = snippet?.targetPackage
+        }
+    }
+
+    fun clearEditingSnippet() {
+        _editingSnippet.value = null
+        _targetPackage.value = null
     }
 
     /**

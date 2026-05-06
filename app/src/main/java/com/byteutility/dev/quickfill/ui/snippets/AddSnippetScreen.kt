@@ -59,10 +59,12 @@ private const val TAG = "AddSnippetScreen"
 fun AddSnippetScreen(
     viewModel: SnippetViewModel,
     onBack: () -> Unit,
-    targetPackage: String?
+    targetPackage: String?,
+    snippetId: Int? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isFromAutofill = targetPackage != null
+    val isEditMode = snippetId != null && snippetId != 0
 
     // Local UI state for form inputs
     var label by remember { mutableStateOf("") }
@@ -76,19 +78,42 @@ fun AddSnippetScreen(
 
     val categories = listOf("GENERAL", "SOCIAL", "FINANCE", "WORK", "IDENTITY", "GAME")
 
-    LaunchedEffect(targetPackage) {
-        viewModel.setInitialPackage(targetPackage)
-        if (isFromAutofill) {
-            isAppPinned = true
+    LaunchedEffect(targetPackage, snippetId) {
+        if (isEditMode) {
+            viewModel.loadSnippetForEditing(snippetId!!)
+        } else {
+            viewModel.setInitialPackage(targetPackage)
+            if (isFromAutofill) {
+                isAppPinned = true
+            }
         }
+    }
+
+    // Sync form with loaded snippet
+    LaunchedEffect(uiState) {
+        val state = uiState
+        if (state is SnippetsUiState.Success && state.editingSnippet != null && isEditMode) {
+            label = state.editingSnippet.label
+            value = state.editingSnippet.value
+            category = state.editingSnippet.category
+            isAppPinned = state.editingSnippet.targetPackage != null
+        }
+    }
+
+    // Clear state when leaving
+    LaunchedEffect(Unit) {
+        // onDispose doesn't exist in LaunchedEffect, using DisposableEffect for cleanup if needed
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Snippet", fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEditMode) "Edit Snippet" else "New Snippet", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        viewModel.clearEditingSnippet()
+                        onBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 }
@@ -118,7 +143,7 @@ fun AddSnippetScreen(
                                 isAppPinned = false
                                 viewModel.updateSelectedPackage(null)
                             },
-                            enabled = !isFromAutofill, // Disable Global if coming from specific app
+                            enabled = !isFromAutofill && !isEditMode, // Disable if coming from specific app or in edit mode
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                             icon = { Icon(Icons.Default.Build, null, Modifier.size(18.dp)) }
                         ) { Text("Global") }
@@ -127,6 +152,7 @@ fun AddSnippetScreen(
                             onClick = {
                                 isAppPinned = true
                             },
+                            enabled = !isEditMode, // Disable changing scope in edit mode
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                             icon = { Icon(Icons.Default.Star, null, Modifier.size(18.dp)) }
                         ) { Text("App-Pinned") }
@@ -136,7 +162,7 @@ fun AddSnippetScreen(
                     // --- APP PICKER OR HEADER (Only for App-Pinned) ---
                     if (isAppPinned) {
                         Column {
-                            if (!isFromAutofill) {
+                            if (!isFromAutofill && !isEditMode) {
                                 ExposedDropdownMenuBox(
                                     expanded = appExpanded,
                                     onExpandedChange = { appExpanded = !appExpanded }
@@ -176,8 +202,8 @@ fun AddSnippetScreen(
                                     }
                                 }
                             } else {
-                                // Locked Header when from Autofill
-                                AppSpecificHeader(targetPackage ?: "")
+                                // Locked Header when from Autofill OR in Edit Mode
+                                AppSpecificHeader(state.targetPackage ?: targetPackage ?: "")
                             }
 
                             // Info Card
@@ -285,11 +311,13 @@ fun AddSnippetScreen(
                                 val finalPackage = if (isAppPinned) state.targetPackage else null
                                 
                                 viewModel.saveSnippet(
-                                    label,
-                                    value,
-                                    finalCategory,
-                                    finalPackage
+                                    label = label,
+                                    value = value,
+                                    category = finalCategory,
+                                    packageName = finalPackage,
+                                    id = snippetId ?: 0
                                 )
+                                viewModel.clearEditingSnippet()
                                 onBack()
                             }
                         },
@@ -301,7 +329,10 @@ fun AddSnippetScreen(
                     ) {
                         Icon(Icons.Default.Done, null)
                         Spacer(Modifier.width(12.dp))
-                        Text("Save to Vault", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (isEditMode) "Update Snippet" else "Save to Vault",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
                 }
 

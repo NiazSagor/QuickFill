@@ -59,13 +59,14 @@ import com.byteutility.dev.quickfill.data.local.Snippet
 @Composable
 fun SnippetListScreen(
     viewModel: SnippetViewModel,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onEditClick: (Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("QuickFill") })
+            TopAppBar(title = { Text("My Data Vault") })
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
@@ -100,6 +101,7 @@ fun SnippetListScreen(
                             SnippetCard(
                                 snippet = snippet,
                                 viewModel = viewModel,
+                                onClick = { onEditClick(snippet.id) },
                                 onDelete = { viewModel.deleteSnippet(snippet) }
                             )
                         }
@@ -116,9 +118,10 @@ fun SnippetListScreen(
 }
 
 @Composable
-fun SnippetCard(snippet: Snippet, viewModel: SnippetViewModel, onDelete: () -> Unit) {
+fun SnippetCard(snippet: Snippet, viewModel: SnippetViewModel, onClick: () -> Unit, onDelete: () -> Unit) {
     val isAppSpecific = !snippet.targetPackage.isNullOrBlank()
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),

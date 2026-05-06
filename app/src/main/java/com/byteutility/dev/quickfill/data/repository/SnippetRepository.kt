@@ -20,6 +20,7 @@ interface SnippetRepository {
     fun getSnippetsForPackageStream(packageName: String): Flow<List<Snippet>>
     fun getKnownPackagesStream(): Flow<List<String>>
     fun getAppMetadataStream(packageName: String): Flow<AppMetadata?>
+    suspend fun getSnippetById(id: Int): Snippet?
     suspend fun insertSnippet(snippet: Snippet)
     suspend fun deleteSnippet(snippet: Snippet)
     suspend fun saveAppMetadataFromSystem(packageName: String)
@@ -44,6 +45,8 @@ class DefaultSnippetRepository @Inject constructor(
 
     override fun getAppMetadataStream(packageName: String): Flow<AppMetadata?> =
         snippetDao.getAppMetadataStream(packageName)
+
+    override suspend fun getSnippetById(id: Int): Snippet? = snippetDao.getSnippetById(id)
 
     override suspend fun insertSnippet(snippet: Snippet) {
         snippetDao.insertSnippet(snippet)

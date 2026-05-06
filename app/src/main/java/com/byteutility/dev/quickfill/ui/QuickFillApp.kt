@@ -29,6 +29,9 @@ object Dest {
     private const val ADD_SNIPPET_BASE = "add_snippet"
     const val ADD_SNIPPET = "$ADD_SNIPPET_BASE?targetPackage={targetPackage}"
 
+    private const val EDIT_SNIPPET_BASE = "edit_snippet"
+    const val EDIT_SNIPPET = "$EDIT_SNIPPET_BASE/{snippetId}"
+
     // Use this function to navigate instead of the constant
     fun passTargetPackage(pkg: String? = null): String {
         return if (pkg != null) {
@@ -36,6 +39,10 @@ object Dest {
         } else {
             ADD_SNIPPET_BASE
         }
+    }
+
+    fun passSnippetId(id: Int): String {
+        return "$EDIT_SNIPPET_BASE/$id"
     }
 }
 
@@ -77,7 +84,8 @@ fun QuickFillApp(
         composable(Dest.SNIPPET_LIST) {
             SnippetListScreen(
                 viewModel = viewModel,
-                onAddClick = { navController.navigate(Dest.passTargetPackage()) }
+                onAddClick = { navController.navigate(Dest.passTargetPackage()) },
+                onEditClick = { id -> navController.navigate(Dest.passSnippetId(id)) }
             )
         }
 
@@ -95,6 +103,23 @@ fun QuickFillApp(
             AddSnippetScreen(
                 viewModel = viewModel,
                 targetPackage = pkg,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Dest.EDIT_SNIPPET,
+            arguments = listOf(
+                navArgument("snippetId") {
+                    type = NavType.IntType
+                }
+            )
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("snippetId") ?: 0
+            AddSnippetScreen(
+                viewModel = viewModel,
+                targetPackage = null,
+                snippetId = id,
                 onBack = { navController.popBackStack() }
             )
         }

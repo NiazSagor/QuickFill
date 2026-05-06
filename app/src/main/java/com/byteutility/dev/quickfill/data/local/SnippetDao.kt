@@ -26,6 +26,9 @@ interface SnippetDao {
     @Query("SELECT DISTINCT targetPackage FROM snippets WHERE targetPackage IS NOT NULL")
     fun getKnownPackagesStream(): Flow<List<String>>
 
+    @Query("SELECT * FROM snippets WHERE id = :id")
+    suspend fun getSnippetById(id: Int): Snippet?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSnippet(snippet: Snippet)
 
