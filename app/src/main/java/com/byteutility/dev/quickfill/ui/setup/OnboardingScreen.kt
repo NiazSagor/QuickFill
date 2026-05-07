@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Lock
@@ -28,6 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -38,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.byteutility.dev.quickfill.R
 import com.byteutility.dev.quickfill.ui.theme.QuickFillTheme
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
@@ -56,26 +62,50 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) { page ->
-                    when (page) {
-                        0 -> OnboardingPage(
-                            title = stringResource(R.string.onboarding_welcome_title),
-                            description = stringResource(R.string.onboarding_welcome_desc),
-                            icon = Icons.Default.AutoAwesome
-                        )
+                    val pageOffset = (
+                            (pagerState.currentPage - page) + pagerState
+                                .currentPageOffsetFraction
+                            ).absoluteValue
 
-                        1 -> OnboardingPage(
-                            title = stringResource(R.string.onboarding_privacy_title),
-                            description = stringResource(R.string.onboarding_privacy_desc),
-                            icon = Icons.Default.Lock
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                val alpha = 1f - (pageOffset * 0.5f).coerceIn(0f, 1f)
+                                val scale = 1f - (pageOffset * 0.2f).coerceIn(0f, 1f)
 
-                        2 -> OnboardingPage(
-                            title = stringResource(R.string.onboarding_setup_title),
-                            description = stringResource(R.string.onboarding_setup_desc),
-                            icon = Icons.Default.SettingsSuggest
-                        )
+                                this.alpha = alpha
+                                this.scaleX = scale
+                                this.scaleY = scale
+                            }
+                    ) {
+                        when (page) {
+                            0 -> OnboardingPage(
+                                title = stringResource(R.string.onboarding_welcome_title),
+                                description = stringResource(R.string.onboarding_welcome_desc),
+                                icon = Icons.Default.AutoAwesome
+                            )
+
+                            1 -> OnboardingPage(
+                                title = stringResource(R.string.onboarding_privacy_title),
+                                description = stringResource(R.string.onboarding_privacy_desc),
+                                icon = Icons.Default.Lock
+                            )
+
+                            2 -> OnboardingPage(
+                                title = stringResource(R.string.onboarding_setup_title),
+                                description = stringResource(R.string.onboarding_setup_desc),
+                                icon = Icons.Default.SettingsSuggest
+                            )
+                        }
                     }
                 }
+
+                PageIndicator(
+                    pageCount = 3,
+                    currentPage = pagerState.currentPage,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
 
                 OnboardingControls(
                     currentPage = pagerState.currentPage,
@@ -84,6 +114,31 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     onComplete = onComplete
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun PageIndicator(
+    pageCount: Int,
+    currentPage: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        repeat(pageCount) { index ->
+            val isSelected = index == currentPage
+            Box(
+                modifier = Modifier
+                    .size(if (isSelected) 12.dp else 8.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                    )
+            )
         }
     }
 }
