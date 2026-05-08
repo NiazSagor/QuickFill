@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">QuickFill</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to QuickFill</string>
+    <string name="onboarding_welcome_desc">Your personal local data vault for repetitive text snippets. No more typing the same addresses or IDs over and over.</string>
+
+    <string name="onboarding_privacy_title">Privacy First</string>
+    <string name="onboarding_privacy_desc">QuickFill stores everything locally in your device. No cloud syncing, no trackers. Your data stays yours.</string>
+
+    <string name="onboarding_setup_title">Ready to Start?</string>
+    <string name="onboarding_setup_desc">To use QuickFill, you need to enable it as your Autofill provider in Android Settings.</string>
+
+    <string name="onboarding_btn_next">Next</string>
+    <string name="onboarding_btn_get_started">Enable QuickFill</string>
+    <string name="onboarding_btn_skip">Skip</string>
 </resources>

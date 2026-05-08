@@ -17,13 +17,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.byteutility.dev.quickfill.ui.setup.OnboardingScreen
 import com.byteutility.dev.quickfill.ui.setup.QuickFillSetupScreen
 import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
 import com.byteutility.dev.quickfill.ui.snippets.SnippetListScreen
 import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
 
 object Dest {
-    const val SETUP = "setup"
+    const val ONBOARDING = "onboarding"
     const val SNIPPET_LIST = "snippet_list"
 
     private const val ADD_SNIPPET_BASE = "add_snippet"
@@ -65,7 +66,7 @@ fun QuickFillApp(
 
     LaunchedEffect(isEnabled, targetPackage) {
         if (!isEnabled) {
-            navController.navigate(Dest.SETUP) {
+            navController.navigate(Dest.ONBOARDING) {
                 popUpTo(0)
             }
         } else if (targetPackage != null) {
@@ -73,12 +74,27 @@ fun QuickFillApp(
         }
     }
 
+    QuickFillNavHost(
+        navController = navController,
+        isEnabled = isEnabled,
+        viewModel = viewModel,
+        onEnableClick = { isEnabled = isAutofillServiceEnabled(context) }
+    )
+}
+
+@Composable
+fun QuickFillNavHost(
+    navController: androidx.navigation.NavHostController,
+    isEnabled: Boolean,
+    viewModel: SnippetViewModel,
+    onEnableClick: () -> Unit
+) {
     NavHost(
         navController = navController,
-        startDestination = if (isEnabled) Dest.SNIPPET_LIST else Dest.SETUP
+        startDestination = if (isEnabled) Dest.SNIPPET_LIST else Dest.ONBOARDING
     ) {
-        composable(Dest.SETUP) {
-            QuickFillSetupScreen()
+        composable(Dest.ONBOARDING) {
+            OnboardingScreen(onComplete = onEnableClick)
         }
 
         composable(Dest.SNIPPET_LIST) {
