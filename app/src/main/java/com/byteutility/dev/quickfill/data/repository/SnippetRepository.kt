@@ -6,8 +6,9 @@ import androidx.core.graphics.drawable.toBitmap
 import com.byteutility.dev.quickfill.data.local.AppMetadata
 import com.byteutility.dev.quickfill.data.local.Snippet
 import com.byteutility.dev.quickfill.data.local.SnippetDao
+import com.byteutility.dev.quickfill.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -29,7 +30,8 @@ interface SnippetRepository {
 @Singleton
 class DefaultSnippetRepository @Inject constructor(
     private val snippetDao: SnippetDao,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : SnippetRepository {
 
     override fun getSnippetsStream(): Flow<List<Snippet>> = snippetDao.getSnippetsStream()
@@ -62,7 +64,7 @@ class DefaultSnippetRepository @Inject constructor(
      * and ensures the app works without QUERY_ALL_PACKAGES.
      */
     override suspend fun saveAppMetadataFromSystem(packageName: String) {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             runCatching {
                 val pm = context.packageManager
                 val info = pm.getApplicationInfo(packageName, 0)

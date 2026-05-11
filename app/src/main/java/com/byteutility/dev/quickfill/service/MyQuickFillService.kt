@@ -229,24 +229,7 @@ class MyQuickFillService : AutofillService() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun detectCategory(info: ApplicationInfo, packageName: String): String {
-        return when (info.category) {
-            ApplicationInfo.CATEGORY_SOCIAL -> "SOCIAL"
-            ApplicationInfo.CATEGORY_MAPS -> "MAPS"
-            ApplicationInfo.CATEGORY_PRODUCTIVITY -> "WORK"
-            ApplicationInfo.CATEGORY_GAME -> "GAME"
-            ApplicationInfo.CATEGORY_AUDIO -> "AUDIO"
-            ApplicationInfo.CATEGORY_VIDEO -> "VIDEO"
-            ApplicationInfo.CATEGORY_IMAGE -> "IMAGE"
-            ApplicationInfo.CATEGORY_NEWS -> "NEWS"
-            else -> {
-                when {
-                    packageName.contains("whatsapp") || packageName.contains("messenger") -> "SOCIAL"
-                    packageName.contains("amazon") || packageName.contains("ebay") -> "SHOPPING"
-                    packageName.contains("bank") || packageName.contains("wallet") -> "FINANCE"
-                    else -> "GENERAL"
-                }
-            }
-        }
+        return CategoryDetector.detectCategory(info.category, packageName)
     }
 
     private suspend fun getSnippetsForCategory(category: String): List<Snippet> {
