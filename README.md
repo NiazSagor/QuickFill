@@ -23,6 +23,29 @@ QuickFill is built "The Android Way":
 
 ---
 
+## 📱 System Requirements & Version Behavior
+
+QuickFill leverages the Android Autofill Framework, which has evolved significantly over different Android versions. The app adapts its UI and logic based on your device's API level.
+
+### **Minimum Requirements**
+- **Android 8.0 (API 26) or higher:** Required for the base Autofill Service functionality.
+
+### **Version-Specific Behavior**
+
+| Android Version | Behavior & UI Features |
+| :--- | :--- |
+| **Android 8.0 - 9.0** (API 26-28) | Uses legacy **Dropdown UI**. Snippets appear in a system-rendered menu below the input field. |
+| **Android 11 - 12L** (API 30-32) | Supports **Inline Suggestions**. Snippets appear as "chips" or "pills" inside compatible keyboards (e.g., Gboard). Falls back to dropdown if the keyboard doesn't support inline suggestions. |
+| **Android 13+** (API 33+) | Uses the modern **Field & Presentation API**. Offers the most stable performance and supports high-resolution app icons in the suggestions. |
+
+### **Limitations**
+- **App Compatibility:** Some apps (e.g., certain browsers or custom views) do not provide the necessary "Autofill Hints." QuickFill may not be able to detect input fields in these apps.
+- **Keyboard Support:** Inline suggestions (chips above the keyboard) require a compatible Input Method Editor (IME) like Gboard or Samsung Keyboard.
+- **Package Visibility:** On Android 11+, system restrictions limit how apps "see" each other. QuickFill uses a metadata caching strategy to ensure app icons and labels are displayed correctly even with these restrictions.
+- **Service Activation:** Like all password managers, you must manually enable QuickFill in **Settings > System > Languages & Input > Autofill service**.
+
+---
+
 ## 📁 Project Structure
 
 The project uses a feature-based clean architecture:
