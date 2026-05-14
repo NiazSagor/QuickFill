@@ -80,6 +80,31 @@ class SnippetDaoTest {
     }
 
     @Test
+    fun getGlobalSnippetsForCategoryStream_returnsOnlyGlobalGeneralAndMatchingCategory() = runTest {
+        val general = Snippet(id = 1, label = "General", value = "V1", category = "GENERAL")
+        val matching = Snippet(id = 2, label = "Social", value = "V2", category = "SOCIAL")
+        val otherCategory = Snippet(id = 3, label = "Finance", value = "V3", category = "FINANCE")
+        val appSpecific = Snippet(
+            id = 4,
+            label = "Pinned",
+            value = "V4",
+            category = "SOCIAL",
+            targetPackage = "pkg.social"
+        )
+
+        snippetDao.insertSnippet(general)
+        snippetDao.insertSnippet(matching)
+        snippetDao.insertSnippet(otherCategory)
+        snippetDao.insertSnippet(appSpecific)
+
+        snippetDao.getGlobalSnippetsForCategoryStream("SOCIAL").test {
+            val list = awaitItem()
+            assertEquals(listOf(general, matching), list)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun insertAndGetAppMetadata() = runTest {
         val metadata = AppMetadata(
             packageName = "com.test.app",

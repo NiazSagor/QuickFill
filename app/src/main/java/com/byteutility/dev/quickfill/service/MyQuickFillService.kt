@@ -82,13 +82,10 @@ class MyQuickFillService : AutofillService() {
                     detectCategory(appInfo, appInfo.packageName)
                 }.getOrDefault("GENERAL")
 
-                val snippets = getSnippetsForPackage(packageName)
+                val snippets = getSnippetsForAutofill(packageName, category)
 
-                val datasets = if (snippets.isEmpty()) {
-                    listOf(buildAddSnippetDataset(packageName, fillId, request))
-                } else {
-                    snippets.map { buildSnippetDataset(it, fillId, request) }
-                }
+                val datasets = snippets.map { buildSnippetDataset(it, fillId, request) } +
+                        buildAddSnippetDataset(packageName, fillId, request)
 
                 val response = FillResponse.Builder()
                     .apply { datasets.forEach { addDataset(it) } }
@@ -232,11 +229,9 @@ class MyQuickFillService : AutofillService() {
         return CategoryDetector.detectCategory(info.category, packageName)
     }
 
-    private suspend fun getSnippetsForCategory(category: String): List<Snippet> {
+    private suspend fun getGlobalSnippetsForCategory(category: String): List<Snippet> {
         return withContext(Dispatchers.IO) {
-            val specific = snippetRepository.getSnippetsByCategoryStream(category).first()
-            val general = snippetRepository.getSnippetsByCategoryStream("GENERAL").first()
-            (specific + general).distinctBy { it.id }
+            snippetRepository.getGlobalSnippetsForCategoryStream(category).first()
         }
     }
 
@@ -244,6 +239,13 @@ class MyQuickFillService : AutofillService() {
         return withContext(Dispatchers.IO) {
             val specific = snippetRepository.getSnippetsForPackageStream(p).first()
             (specific).distinctBy { it.id }
+        }
+    }
+
+    private suspend fun getSnippetsForAutofill(packageName: String, category: String): List<Snippet> {
+        val appSpecific = getSnippetsForPackage(packageName)
+        return appSpecific.ifEmpty {
+            getGlobalSnippetsForCategory(category).distinctBy { it.id }
         }
     }
 

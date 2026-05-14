@@ -123,6 +123,27 @@ class SnippetRepositoryTest {
     }
 
     @Test
+    fun getGlobalSnippetsForCategoryStream() = runTest {
+        repository.insertSnippet(Snippet(label = "General", value = "V1", category = "GENERAL"))
+        repository.insertSnippet(Snippet(label = "Social", value = "V2", category = "SOCIAL"))
+        repository.insertSnippet(Snippet(label = "Finance", value = "V3", category = "FINANCE"))
+        repository.insertSnippet(
+            Snippet(
+                label = "Pinned",
+                value = "V4",
+                category = "SOCIAL",
+                targetPackage = "pkg.social"
+            )
+        )
+
+        val snippets = repository.getGlobalSnippetsForCategoryStream("SOCIAL").first()
+
+        assertEquals(2, snippets.size)
+        assertEquals(listOf("General", "Social"), snippets.map { it.label })
+        assertTrue(snippets.all { it.targetPackage == null })
+    }
+
+    @Test
     fun getKnownPackagesStream() = runTest {
         repository.insertSnippet(Snippet(label = "S1", value = "V1", category = "CAT", targetPackage = "pkg.a"))
         repository.insertSnippet(Snippet(label = "S2", value = "V2", category = "CAT", targetPackage = "pkg.b"))

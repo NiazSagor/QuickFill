@@ -19,6 +19,7 @@ interface SnippetRepository {
     fun getSnippetsStream(): Flow<List<Snippet>>
     fun getSnippetsByCategoryStream(category: String): Flow<List<Snippet>>
     fun getSnippetsForPackageStream(packageName: String): Flow<List<Snippet>>
+    fun getGlobalSnippetsForCategoryStream(category: String): Flow<List<Snippet>>
     fun getKnownPackagesStream(): Flow<List<String>>
     fun getAppMetadataStream(packageName: String): Flow<AppMetadata?>
     suspend fun getSnippetById(id: Int): Snippet?
@@ -41,6 +42,9 @@ class DefaultSnippetRepository @Inject constructor(
 
     override fun getSnippetsForPackageStream(packageName: String): Flow<List<Snippet>> = 
         snippetDao.getSnippetsForPackageStream(packageName)
+
+    override fun getGlobalSnippetsForCategoryStream(category: String): Flow<List<Snippet>> =
+        snippetDao.getGlobalSnippetsForCategoryStream(category)
 
     override fun getKnownPackagesStream(): Flow<List<String>> = 
         snippetDao.getKnownPackagesStream()
