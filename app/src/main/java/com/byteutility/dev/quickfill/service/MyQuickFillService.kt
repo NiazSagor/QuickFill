@@ -3,6 +3,7 @@ package com.byteutility.dev.quickfill.service
 
 import android.app.PendingIntent
 import android.app.assist.AssistStructure
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
@@ -129,8 +130,23 @@ class MyQuickFillService : AutofillService() {
 
         val pendingIntent = buildTrampolinePendingIntent(packageName, addSnippet.id.hashCode())
 
-        val presentations = buildAddSnippetPresentations(addSnippet, request, pendingIntent, appIcon)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            buildAddSnippetDatasetApi33(addSnippet, fillId, request, pendingIntent, appIcon)
+        } else {
+            buildAddSnippetDatasetApi26To32(addSnippet, fillId, request, pendingIntent, appIcon)
+        }
+    }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun buildAddSnippetDatasetApi33(
+        addSnippet: Snippet,
+        fillId: AutofillId,
+        request: FillRequest,
+        pendingIntent: PendingIntent,
+        appIcon: Bitmap?
+    ): Dataset {
+        // API 33+ implementation: uses Field + Presentations, which is the modern Autofill API.
+        val presentations = buildAddSnippetPresentationsApi33(addSnippet, request, pendingIntent, appIcon)
         val field = Field.Builder()
             .setValue(AutofillValue.forText(addSnippet.value))
             .setPresentations(presentations)
@@ -142,14 +158,63 @@ class MyQuickFillService : AutofillService() {
             .build()
     }
 
+    private fun buildAddSnippetDatasetApi26To32(
+        addSnippet: Snippet,
+        fillId: AutofillId,
+        request: FillRequest,
+        pendingIntent: PendingIntent,
+        appIcon: Bitmap?
+    ): Dataset {
+        // API 26-32 implementation: avoids Field and Presentations because they require API 33.
+        val menuPresentation = buildAddSnippetMenuPresentation(addSnippet, appIcon)
+
+        return Dataset.Builder(menuPresentation)
+            .setAuthentication(pendingIntent.intentSender)
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val inlineRequest = request.inlineSuggestionsRequest
+                    val inlinePresentation = inlineRequest?.let {
+                        createInlinePresentation(addSnippet, it, pendingIntent)
+                    }
+                    if (inlinePresentation != null) {
+                        setLegacyValueWithInline(
+                            fillId,
+                            AutofillValue.forText(addSnippet.value),
+                            menuPresentation,
+                            inlinePresentation
+                        )
+                    } else {
+                        setValue(fillId, AutofillValue.forText(addSnippet.value))
+                    }
+                } else {
+                    setValue(fillId, AutofillValue.forText(addSnippet.value))
+                }
+            }
+            .build()
+    }
+
     private fun buildSnippetDataset(
         snippet: Snippet,
         fillId: AutofillId,
         request: FillRequest
     ): Dataset {
         val appIcon = snippet.targetPackage?.let { getAppIcon(it) }
-        val presentations = buildPresentations(snippet, request, pendingIntent = null, appIcon)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            buildSnippetDatasetApi33(snippet, fillId, request, appIcon)
+        } else {
+            buildSnippetDatasetApi26To32(snippet, fillId, request, appIcon)
+        }
+    }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun buildSnippetDatasetApi33(
+        snippet: Snippet,
+        fillId: AutofillId,
+        request: FillRequest,
+        appIcon: Bitmap?
+    ): Dataset {
+        // API 33+ implementation: uses Field + Presentations, which is the modern Autofill API.
+        val presentations = buildPresentationsApi33(snippet, request, pendingIntent = null, appIcon)
         val field = Field.Builder()
             .setValue(AutofillValue.forText(snippet.value))
             .setPresentations(presentations)
@@ -160,13 +225,82 @@ class MyQuickFillService : AutofillService() {
             .build()
     }
 
-    private fun buildPresentations(
+    private fun buildSnippetDatasetApi26To32(
+        snippet: Snippet,
+        fillId: AutofillId,
+        request: FillRequest,
+        appIcon: Bitmap?
+    ): Dataset {
+        // API 26-32 implementation: uses legacy Dataset RemoteViews APIs only.
+        val menuPresentation = buildSnippetMenuPresentation(snippet, appIcon)
+
+        return Dataset.Builder(menuPresentation)
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val inlineRequest = request.inlineSuggestionsRequest
+                    val inlinePresentation = inlineRequest?.let {
+                        createInlinePresentation(snippet, it, pendingIntent = null)
+                    }
+                    if (inlinePresentation != null) {
+                        setLegacyValueWithInline(
+                            fillId,
+                            AutofillValue.forText(snippet.value),
+                            menuPresentation,
+                            inlinePresentation
+                        )
+                    } else {
+                        setValue(fillId, AutofillValue.forText(snippet.value))
+                    }
+                } else {
+                    setValue(fillId, AutofillValue.forText(snippet.value))
+                }
+            }
+            .build()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun buildPresentationsApi33(
         snippet: Snippet,
         request: FillRequest,
         pendingIntent: PendingIntent?,
         appIcon: Bitmap?
     ): Presentations {
-        val menuPresentation = RemoteViews(this@MyQuickFillService.packageName, R.layout.autofill_item).apply {
+        // API 33+ presentation object for saved snippets.
+        val menuPresentation = buildSnippetMenuPresentation(snippet, appIcon)
+
+
+        val presBuilder = Presentations.Builder()
+            .setMenuPresentation(menuPresentation)
+
+        createInlinePresentationIfSupported(snippet, request, pendingIntent)?.let {
+            presBuilder.setInlinePresentation(it)
+        }
+
+        return presBuilder.build()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun buildAddSnippetPresentationsApi33(
+        snippet: Snippet,
+        request: FillRequest,
+        pendingIntent: PendingIntent,
+        appIcon: Bitmap?
+    ): Presentations {
+        // API 33+ presentation object for the authenticated "Add for this app" action.
+        val menuPresentation = buildAddSnippetMenuPresentation(snippet, appIcon)
+
+        val presBuilder = Presentations.Builder()
+            .setMenuPresentation(menuPresentation)
+
+        createInlinePresentationIfSupported(snippet, request, pendingIntent)?.let {
+            presBuilder.setInlinePresentation(it)
+        }
+
+        return presBuilder.build()
+    }
+
+    private fun buildSnippetMenuPresentation(snippet: Snippet, appIcon: Bitmap?): RemoteViews {
+        return RemoteViews(this@MyQuickFillService.packageName, R.layout.autofill_item).apply {
             setTextViewText(R.id.autofill_title, snippet.label)
             setTextViewText(R.id.autofill_subtitle, getAutofillSubtitle(snippet))
             if (appIcon != null) {
@@ -175,26 +309,10 @@ class MyQuickFillService : AutofillService() {
                 setImageViewResource(R.id.autofill_icon, getAutofillIconResource(snippet))
             }
         }
-
-
-        val presBuilder = Presentations.Builder()
-            .setMenuPresentation(menuPresentation)
-
-        request.inlineSuggestionsRequest?.let { inlineReq ->
-            val inlinePres = createInlinePresentation(snippet, inlineReq, pendingIntent)
-            if (inlinePres != null) presBuilder.setInlinePresentation(inlinePres)
-        }
-
-        return presBuilder.build()
     }
 
-    private fun buildAddSnippetPresentations(
-        snippet: Snippet,
-        request: FillRequest,
-        pendingIntent: PendingIntent,
-        appIcon: Bitmap?
-    ): Presentations {
-        val menuPresentation = RemoteViews(
+    private fun buildAddSnippetMenuPresentation(snippet: Snippet, appIcon: Bitmap?): RemoteViews {
+        return RemoteViews(
             this@MyQuickFillService.packageName,
             R.layout.autofill_action_item
         ).apply {
@@ -205,16 +323,17 @@ class MyQuickFillService : AutofillService() {
                 setImageViewResource(R.id.autofill_action_icon, android.R.drawable.ic_menu_add)
             }
         }
+    }
 
-        val presBuilder = Presentations.Builder()
-            .setMenuPresentation(menuPresentation)
-
-        request.inlineSuggestionsRequest?.let { inlineReq ->
-            val inlinePres = createInlinePresentation(snippet, inlineReq, pendingIntent)
-            if (inlinePres != null) presBuilder.setInlinePresentation(inlinePres)
-        }
-
-        return presBuilder.build()
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun Dataset.Builder.setLegacyValueWithInline(
+        fillId: AutofillId,
+        value: AutofillValue,
+        menuPresentation: RemoteViews,
+        inlinePresentation: InlinePresentation
+    ) {
+        // API 30-32 enhancement inside the legacy path: menu RemoteViews plus keyboard inline UI.
+        setValue(fillId, value, menuPresentation, inlinePresentation)
     }
 
     private fun buildTrampolinePendingIntent(packageName: String, requestCode: Int): PendingIntent {
@@ -230,6 +349,8 @@ class MyQuickFillService : AutofillService() {
         )
     }
 
+    @SuppressLint("RestrictedApi")
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun createInlinePresentation(
         snippet: Snippet,
         inlineRequest: InlineSuggestionsRequest,
@@ -247,6 +368,19 @@ class MyQuickFillService : AutofillService() {
             .slice
 
         return InlinePresentation(slice, spec, false)
+    }
+
+    private fun createInlinePresentationIfSupported(
+        snippet: Snippet,
+        request: FillRequest,
+        pendingIntent: PendingIntent?
+    ): InlinePresentation? {
+        // Inline suggestions are available from API 30. API 26-29 use only menu RemoteViews.
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            createInlinePresentation(snippet, request.inlineSuggestionsRequest ?: return null, pendingIntent)
+        } else {
+            null
+        }
     }
 
     private fun getAutofillDisplayLabel(snippet: Snippet): String {
