@@ -246,6 +246,7 @@ fun AddSnippetScreen(
                         label = { Text("Label") },
                         placeholder = { Text("e.g. Work Email") },
                         modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
                         shape = RoundedCornerShape(12.dp)
                     )
 

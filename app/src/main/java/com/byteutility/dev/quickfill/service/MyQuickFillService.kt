@@ -117,7 +117,7 @@ class MyQuickFillService : AutofillService() {
         fillId: AutofillId,
         request: FillRequest
     ): Dataset {
-        val appLabel = packageName.split(".").last()
+        val appLabel = getAppLabelForPackage(packageName)
         val appIcon = getAppIcon(packageName) // Fetch the icon here
 
         val addSnippet = Snippet(
@@ -129,7 +129,7 @@ class MyQuickFillService : AutofillService() {
 
         val pendingIntent = buildTrampolinePendingIntent(packageName, addSnippet.id.hashCode())
 
-        val presentations = buildPresentations(addSnippet, request, pendingIntent, appIcon)
+        val presentations = buildAddSnippetPresentations(addSnippet, request, pendingIntent, appIcon)
 
         val field = Field.Builder()
             .setValue(AutofillValue.forText(addSnippet.value))
@@ -147,7 +147,8 @@ class MyQuickFillService : AutofillService() {
         fillId: AutofillId,
         request: FillRequest
     ): Dataset {
-        val presentations = buildPresentations(snippet, request, pendingIntent = null, null)
+        val appIcon = snippet.targetPackage?.let { getAppIcon(it) }
+        val presentations = buildPresentations(snippet, request, pendingIntent = null, appIcon)
 
         val field = Field.Builder()
             .setValue(AutofillValue.forText(snippet.value))
@@ -165,21 +166,45 @@ class MyQuickFillService : AutofillService() {
         pendingIntent: PendingIntent?,
         appIcon: Bitmap?
     ): Presentations {
-
-        val menuPresentation = if (appIcon != null) {
-            RemoteViews(this@MyQuickFillService.packageName, R.layout.autofill_item).apply {
-                setTextViewText(R.id.autofill_text, snippet.label)
+        val menuPresentation = RemoteViews(this@MyQuickFillService.packageName, R.layout.autofill_item).apply {
+            setTextViewText(R.id.autofill_title, snippet.label)
+            setTextViewText(R.id.autofill_subtitle, getAutofillSubtitle(snippet))
+            if (appIcon != null) {
                 setImageViewBitmap(R.id.autofill_icon, appIcon)
-            }
-        } else {
-            RemoteViews(
-                this@MyQuickFillService.packageName,
-                android.R.layout.simple_list_item_1
-            ).apply {
-                setTextViewText(android.R.id.text1, snippet.label)
+            } else {
+                setImageViewResource(R.id.autofill_icon, getAutofillIconResource(snippet))
             }
         }
 
+
+        val presBuilder = Presentations.Builder()
+            .setMenuPresentation(menuPresentation)
+
+        request.inlineSuggestionsRequest?.let { inlineReq ->
+            val inlinePres = createInlinePresentation(snippet, inlineReq, pendingIntent)
+            if (inlinePres != null) presBuilder.setInlinePresentation(inlinePres)
+        }
+
+        return presBuilder.build()
+    }
+
+    private fun buildAddSnippetPresentations(
+        snippet: Snippet,
+        request: FillRequest,
+        pendingIntent: PendingIntent,
+        appIcon: Bitmap?
+    ): Presentations {
+        val menuPresentation = RemoteViews(
+            this@MyQuickFillService.packageName,
+            R.layout.autofill_action_item
+        ).apply {
+            setTextViewText(R.id.autofill_action_text, snippet.label)
+            if (appIcon != null) {
+                setImageViewBitmap(R.id.autofill_action_icon, appIcon)
+            } else {
+                setImageViewResource(R.id.autofill_action_icon, android.R.drawable.ic_menu_add)
+            }
+        }
 
         val presBuilder = Presentations.Builder()
             .setMenuPresentation(menuPresentation)
@@ -217,11 +242,45 @@ class MyQuickFillService : AutofillService() {
         )
 
         val slice = InlineSuggestionUi.newContentBuilder(pi)
-            .setTitle(snippet.label)
+            .setTitle(getAutofillDisplayLabel(snippet))
             .build()
             .slice
 
         return InlinePresentation(slice, spec, false)
+    }
+
+    private fun getAutofillDisplayLabel(snippet: Snippet): String {
+        return if (snippet.targetPackage == null && snippet.id != -1) {
+            "${snippet.label} - Global"
+        } else {
+            snippet.label
+        }
+    }
+
+    private fun getAutofillSubtitle(snippet: Snippet): String {
+        return when {
+            snippet.id == -1 -> "App-specific"
+            snippet.targetPackage == null -> "Global - ${snippet.category}"
+            else -> "App-specific"
+        }
+    }
+
+    private fun getAutofillIconResource(snippet: Snippet): Int {
+        return when (snippet.category.uppercase()) {
+            "WORK" -> android.R.drawable.ic_dialog_email
+            "SOCIAL" -> android.R.drawable.ic_menu_share
+            "FINANCE" -> android.R.drawable.ic_menu_manage
+            "IDENTITY" -> android.R.drawable.ic_menu_myplaces
+            "GAME" -> android.R.drawable.ic_media_play
+            else -> android.R.drawable.ic_menu_edit
+        }
+    }
+
+    private fun getAppLabelForPackage(packageName: String): String {
+        return runCatching {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        }.getOrDefault(packageName.split(".").last())
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
