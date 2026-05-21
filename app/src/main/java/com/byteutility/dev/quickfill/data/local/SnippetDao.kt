@@ -19,6 +19,16 @@ interface SnippetDao {
     @Query("SELECT * FROM snippets WHERE targetPackage = :packageName ORDER BY label ASC")
     fun getSnippetsForPackageStream(packageName: String): Flow<List<Snippet>>
 
+    @Query(
+        """
+        SELECT * FROM snippets
+        WHERE targetPackage IS NULL
+        AND (category = :category OR category = 'GENERAL')
+        ORDER BY label ASC
+        """
+    )
+    fun getGlobalSnippetsForCategoryStream(category: String): Flow<List<Snippet>>
+
     /**
      * PERFORMANCE DECISION: Using DISTINCT in the database is significantly more 
      * efficient than fetching all snippets and filtering in memory (Kotlin).
