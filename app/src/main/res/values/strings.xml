@@ -17,6 +17,10 @@
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_get_started">Enable QuickFill</string>
     <string name="onboarding_btn_skip">Skip</string>
+    <string name="setup_reenable_title">QuickFill is turned off</string>
+    <string name="setup_reenable_desc">QuickFill is no longer selected as your Autofill service. Turn it back on in Android Settings to keep using your saved snippets.</string>
+    <string name="setup_reenable_note">Android may show a standard trust warning before you can select QuickFill again.</string>
+    <string name="setup_reenable_button">Re-enable QuickFill</string>
 
     <string name="demo_stage_open_app">Open any app with a text field.</string>
     <string name="demo_stage_long_press">Long press the text field to open the edit menu.</string>

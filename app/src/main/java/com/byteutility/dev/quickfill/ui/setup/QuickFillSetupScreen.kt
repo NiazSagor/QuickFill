@@ -18,8 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.byteutility.dev.quickfill.R
 
 @Composable
 fun QuickFillSetupScreen() {
@@ -34,7 +36,7 @@ fun QuickFillSetupScreen() {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "QuickFill",
+            text = stringResource(R.string.setup_reenable_title),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary
         )
@@ -42,25 +44,32 @@ fun QuickFillSetupScreen() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Android will show a 'Trust this app' warning. This is standard for all Autofill services so they can detect which text field you are tapping on.",
+            text = stringResource(R.string.setup_reenable_desc),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = stringResource(R.string.setup_reenable_note),
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
             onClick = {
-                // This intent takes the user directly to the Autofill Service picker
                 val intent = Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).apply {
-                    // This data URI tells Android which package is asking
                     data = Uri.parse("package:com.byteutility.dev.quickfill")
                 }
                 context.startActivity(intent)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Enable QuickFill Service")
+            Text(stringResource(R.string.setup_reenable_button))
         }
     }
 }

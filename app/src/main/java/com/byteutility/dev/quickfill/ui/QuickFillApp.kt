@@ -1,7 +1,6 @@
 package com.byteutility.dev.quickfill.ui
 
 import android.content.Context
-import android.util.Log
 import android.view.autofill.AutofillManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +24,7 @@ import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
 
 object Dest {
     const val ONBOARDING = "onboarding"
+    const val SETUP = "setup"
     const val SNIPPET_LIST = "snippet_list"
 
     private const val ADD_SNIPPET_BASE = "add_snippet"
@@ -54,6 +54,9 @@ fun QuickFillApp(
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
+    var hasCompletedOnboarding by remember {
+        mutableStateOf(hasCompletedOnboarding(context))
+    }
 
     var isEnabled by remember {
         mutableStateOf(isAutofillServiceEnabled(context))
@@ -65,8 +68,12 @@ fun QuickFillApp(
     }
 
     LaunchedEffect(isEnabled, targetPackage) {
-        if (!isEnabled) {
+        if (!isEnabled && !hasCompletedOnboarding) {
             navController.navigate(Dest.ONBOARDING) {
+                popUpTo(0)
+            }
+        } else if (!isEnabled) {
+            navController.navigate(Dest.SETUP) {
                 popUpTo(0)
             }
         } else if (targetPackage != null) {
@@ -76,8 +83,13 @@ fun QuickFillApp(
 
     QuickFillNavHost(
         navController = navController,
+        hasCompletedOnboarding = hasCompletedOnboarding,
         isEnabled = isEnabled,
         viewModel = viewModel,
+        onOnboardingComplete = {
+            setHasCompletedOnboarding(context)
+            hasCompletedOnboarding = true
+        },
         onEnableClick = { isEnabled = isAutofillServiceEnabled(context) }
     )
 }
@@ -85,16 +97,31 @@ fun QuickFillApp(
 @Composable
 fun QuickFillNavHost(
     navController: androidx.navigation.NavHostController,
+    hasCompletedOnboarding: Boolean,
     isEnabled: Boolean,
     viewModel: SnippetViewModel,
+    onOnboardingComplete: () -> Unit,
     onEnableClick: () -> Unit
 ) {
     NavHost(
         navController = navController,
-        startDestination = if (isEnabled) Dest.SNIPPET_LIST else Dest.ONBOARDING
+        startDestination = when {
+            isEnabled -> Dest.SNIPPET_LIST
+            hasCompletedOnboarding -> Dest.SETUP
+            else -> Dest.ONBOARDING
+        }
     ) {
         composable(Dest.ONBOARDING) {
-            OnboardingScreen(onComplete = onEnableClick)
+            OnboardingScreen(
+                onComplete = {
+                    onOnboardingComplete()
+                    onEnableClick()
+                }
+            )
+        }
+
+        composable(Dest.SETUP) {
+            QuickFillSetupScreen()
         }
 
         composable(Dest.SNIPPET_LIST) {
@@ -145,4 +172,21 @@ fun QuickFillNavHost(
 fun isAutofillServiceEnabled(context: Context): Boolean {
     val autofillManager = context.getSystemService(AutofillManager::class.java)
     return autofillManager != null && autofillManager.hasEnabledAutofillServices()
+}
+
+private const val PREFS_NAME = "quickfill_prefs"
+private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+
+private fun hasCompletedOnboarding(context: Context): Boolean {
+    return context
+        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getBoolean(KEY_ONBOARDING_COMPLETED, false)
+}
+
+private fun setHasCompletedOnboarding(context: Context) {
+    context
+        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_ONBOARDING_COMPLETED, true)
+        .apply()
 }
