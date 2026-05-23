@@ -25,7 +25,7 @@
     <string name="demo_mock_message_label">Message</string>
     <string name="demo_mock_snippet_work_email">Work Email</string>
     <string name="demo_mock_snippet_home_address">Home Address</string>
-    <string name="demo_mock_field_value">hi@byteutility.dev</string>
+    <string name="demo_mock_field_value">Global - GENERAL</string>
     <string name="demo_mock_context_paste">Paste</string>
     <string name="demo_mock_context_select_all">Select all</string>
     <string name="demo_mock_context_autofill">Autofill</string>

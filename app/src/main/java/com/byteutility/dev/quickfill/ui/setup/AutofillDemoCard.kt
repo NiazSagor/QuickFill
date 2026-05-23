@@ -52,7 +52,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.byteutility.dev.quickfill.R
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
 import kotlinx.coroutines.delay
 
 private enum class DemoStep {
@@ -347,70 +352,59 @@ private fun FakeSuggestionPanel() {
                 color = Color(0xFF1A2433),
                 fontWeight = FontWeight.SemiBold
             )
-            SuggestionItem(
-                icon = Icons.Default.Email,
+            DemoAutofillItem(
+                iconRes = android.R.drawable.ic_dialog_email,
                 title = stringResource(R.string.demo_mock_snippet_work_email),
                 subtitle = stringResource(R.string.demo_mock_field_value),
                 emphasized = true
             )
-            SuggestionItem(
-                icon = Icons.Default.LocationOn,
+            DemoAutofillItem(
+                iconRes = android.R.drawable.ic_menu_mylocation,
                 title = stringResource(R.string.demo_mock_snippet_home_address),
-                subtitle = "Mirpur DOHS, Dhaka"
+                subtitle = "Global - GENERAL"
             )
         }
     }
 }
 
 @Composable
-private fun SuggestionItem(
-    icon: ImageVector,
+private fun DemoAutofillItem(
+    iconRes: Int,
     title: String,
     subtitle: String,
     emphasized: Boolean = false
 ) {
-    Row(
+    val rowColor = if (emphasized) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+    } else {
+        Color(0xFFF7F9FC)
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(
-                if (emphasized) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-                else Color(0xFFF7F9FC)
-            )
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .background(rowColor)
     ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(
-                    if (emphasized) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                    else Color(0xFFE3EAF2)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (emphasized) MaterialTheme.colorScheme.primary else Color(0xFF526273),
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF1A2433)
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF61758A)
-            )
-        }
+        AndroidView(
+            modifier = Modifier.fillMaxWidth(),
+            factory = { context ->
+                LayoutInflater.from(context)
+                    .inflate(R.layout.autofill_item, null, false)
+                    .apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                    }
+            },
+            update = { view ->
+                view.findViewById<ImageView>(R.id.autofill_icon).setImageResource(iconRes)
+                view.findViewById<TextView>(R.id.autofill_title).text = title
+                view.findViewById<TextView>(R.id.autofill_subtitle).text = subtitle
+                view.alpha = if (emphasized) 1f else 0.92f
+            }
+        )
     }
 }
 
