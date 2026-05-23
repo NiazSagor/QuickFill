@@ -8,10 +8,26 @@
     <string name="onboarding_privacy_title">Privacy First</string>
     <string name="onboarding_privacy_desc">QuickFill stores everything locally in your device. No cloud syncing, no trackers. Your data stays yours.</string>
 
+    <string name="onboarding_demo_title">How QuickFill appears</string>
+    <string name="onboarding_demo_desc">If suggestions do not appear automatically, long press the field, tap Autofill, then choose a saved snippet.</string>
+
     <string name="onboarding_setup_title">Ready to Start?</string>
     <string name="onboarding_setup_desc">To use QuickFill, you need to enable it as your Autofill provider in Android Settings.</string>
 
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_get_started">Enable QuickFill</string>
     <string name="onboarding_btn_skip">Skip</string>
+
+    <string name="demo_stage_open_app">Open any app with a text field.</string>
+    <string name="demo_stage_long_press">Long press the text field to open the edit menu.</string>
+    <string name="demo_stage_autofill">Tap Autofill from the menu.</string>
+    <string name="demo_stage_pick_snippet">Pick a QuickFill snippet for that app.</string>
+    <string name="demo_mock_message_label">Message</string>
+    <string name="demo_mock_snippet_work_email">Work Email</string>
+    <string name="demo_mock_snippet_home_address">Home Address</string>
+    <string name="demo_mock_field_value">hi@byteutility.dev</string>
+    <string name="demo_mock_context_paste">Paste</string>
+    <string name="demo_mock_context_select_all">Select all</string>
+    <string name="demo_mock_context_autofill">Autofill</string>
+    <string name="demo_mock_suggestion_header">QuickFill suggestions</string>
 </resources>
