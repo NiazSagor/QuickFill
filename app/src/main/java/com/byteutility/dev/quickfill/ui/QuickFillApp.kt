@@ -67,7 +67,7 @@ fun QuickFillApp(
         onPauseOrDispose { }
     }
 
-    LaunchedEffect(isEnabled, targetPackage) {
+    LaunchedEffect(isEnabled, hasCompletedOnboarding, targetPackage) {
         if (!isEnabled && !hasCompletedOnboarding) {
             navController.navigate(Dest.ONBOARDING) {
                 popUpTo(0)
