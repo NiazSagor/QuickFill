@@ -1,5 +1,10 @@
 package com.byteutility.dev.quickfill.ui.snippets
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.List
@@ -39,6 +45,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,6 +54,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.byteutility.dev.quickfill.data.local.Snippet
+import com.byteutility.dev.quickfill.ui.isAutofillServiceEnabled
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +84,8 @@ fun SnippetListScreen(
     val isDarkModeOverride by viewModel.isDarkMode.collectAsStateWithLifecycle()
     val isSystemDark = isSystemInDarkTheme()
     val isDark = isDarkModeOverride ?: isSystemDark
+    val context = LocalContext.current
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -84,6 +97,26 @@ fun SnippetListScreen(
                             imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                             contentDescription = "Toggle Dark Mode"
                         )
+                    }
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More options"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Manage Autofill service") },
+                                onClick = {
+                                    menuExpanded = false
+                                    openAutofillManagement(context)
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -103,7 +136,10 @@ fun SnippetListScreen(
             is SnippetsUiState.Success -> {
                 if (state.snippets.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(padding),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("No snippets saved yet.", color = Color.Gray)
@@ -220,6 +256,47 @@ fun SnippetCard(snippet: Snippet, viewModel: SnippetViewModel, onClick: () -> Un
                 )
             }
         }
+    }
+}
+
+private fun openAutofillManagement(context: android.content.Context) {
+    val intents = buildList {
+        add(
+            Intent("android.settings.CREDENTIAL_PROVIDER").apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+
+        if (!isAutofillServiceEnabled(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            add(
+                Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+        }
+
+        add(
+            Intent(Settings.ACTION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+    }
+
+    val packageManager = context.packageManager
+    val targetIntent = intents.firstOrNull { intent ->
+        intent.resolveActivity(packageManager) != null
+    }
+
+    if (targetIntent != null) {
+        context.startActivity(targetIntent)
+    } else {
+        Toast.makeText(
+            context,
+            "Unable to open Autofill settings on this device.",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
 
