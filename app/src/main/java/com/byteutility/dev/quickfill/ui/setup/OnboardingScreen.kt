@@ -32,20 +32,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.byteutility.dev.quickfill.R
-import com.byteutility.dev.quickfill.ui.openQuickFillAutofillSettings
 import com.byteutility.dev.quickfill.ui.theme.QuickFillTheme
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
 @Composable
-fun OnboardingScreen(onComplete: () -> Unit) {
+fun OnboardingScreen(
+    onOpenAutofillSettings: () -> Boolean,
+    onComplete: () -> Unit
+) {
     val pageCount = 4
     val pagerState = rememberPagerState(pageCount = { pageCount })
     val scope = rememberCoroutineScope()
@@ -114,6 +115,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     lastPage = pageCount - 1,
                     onNext = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
                     onSkip = { scope.launch { pagerState.animateScrollToPage(pageCount - 1) } },
+                    onOpenAutofillSettings = onOpenAutofillSettings,
                     onComplete = onComplete
                 )
             }
@@ -152,9 +154,9 @@ fun OnboardingControls(
     lastPage: Int,
     onNext: () -> Unit,
     onSkip: () -> Unit,
+    onOpenAutofillSettings: () -> Boolean,
     onComplete: () -> Unit
 ) {
-    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,7 +174,7 @@ fun OnboardingControls(
         } else {
             Button(
                 onClick = {
-                    openQuickFillAutofillSettings(context)
+                    onOpenAutofillSettings()
                     onComplete()
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -253,7 +255,10 @@ fun DemoOnboardingPage() {
 @Composable
 fun OnboardingPreview() {
     QuickFillTheme {
-        OnboardingScreen(onComplete = {})
+        OnboardingScreen(
+            onOpenAutofillSettings = { true },
+            onComplete = {}
+        )
     }
 }
 
@@ -266,6 +271,7 @@ fun OnboardingControlsFirstPagePreview() {
             lastPage = 3,
             onNext = {},
             onSkip = {},
+            onOpenAutofillSettings = { true },
             onComplete = {}
         )
     }
@@ -280,6 +286,7 @@ fun OnboardingControlsLastPagePreview() {
             lastPage = 3,
             onNext = {},
             onSkip = {},
+            onOpenAutofillSettings = { true },
             onComplete = {}
         )
     }

@@ -14,17 +14,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.byteutility.dev.quickfill.R
-import com.byteutility.dev.quickfill.ui.openQuickFillAutofillSettings
 
 @Composable
-fun QuickFillSetupScreen() {
-    val context = LocalContext.current
-
+fun QuickFillSetupScreen(onOpenAutofillSettings: () -> Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,7 +56,7 @@ fun QuickFillSetupScreen() {
 
         Button(
             onClick = {
-                openQuickFillAutofillSettings(context)
+                onOpenAutofillSettings()
             },
             modifier = Modifier.fillMaxWidth()
         ) {

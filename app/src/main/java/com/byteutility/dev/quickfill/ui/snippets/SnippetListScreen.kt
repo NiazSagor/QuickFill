@@ -71,14 +71,14 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.byteutility.dev.quickfill.data.local.Snippet
-import com.byteutility.dev.quickfill.ui.isQuickFillAutofillEnabled
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SnippetListScreen(
     viewModel: SnippetViewModel,
     onAddClick: () -> Unit,
-    onEditClick: (Int) -> Unit
+    onEditClick: (Int) -> Unit,
+    isQuickFillAutofillEnabled: () -> Boolean
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isDarkModeOverride by viewModel.isDarkMode.collectAsStateWithLifecycle()
@@ -113,7 +113,10 @@ fun SnippetListScreen(
                                 text = { Text("Manage Autofill service") },
                                 onClick = {
                                     menuExpanded = false
-                                    openAutofillManagement(context)
+                                    openAutofillManagement(
+                                        context = context,
+                                        isQuickFillAutofillEnabled = isQuickFillAutofillEnabled
+                                    )
                                 }
                             )
                         }
@@ -259,7 +262,10 @@ fun SnippetCard(snippet: Snippet, viewModel: SnippetViewModel, onClick: () -> Un
     }
 }
 
-private fun openAutofillManagement(context: android.content.Context) {
+private fun openAutofillManagement(
+    context: android.content.Context,
+    isQuickFillAutofillEnabled: () -> Boolean
+) {
     val intents = buildList {
         add(
             Intent("android.settings.CREDENTIAL_PROVIDER").apply {
@@ -268,7 +274,7 @@ private fun openAutofillManagement(context: android.content.Context) {
             }
         )
 
-        if (!isQuickFillAutofillEnabled(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (!isQuickFillAutofillEnabled() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             add(buildQuickFillAutofillSettingsIntent(context))
         }
 
