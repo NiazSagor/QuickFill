@@ -269,12 +269,7 @@ private fun openAutofillManagement(context: android.content.Context) {
         )
 
         if (!isQuickFillAutofillEnabled(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            add(
-                Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-            )
+            add(buildQuickFillAutofillSettingsIntent(context))
         }
 
         add(
@@ -297,6 +292,13 @@ private fun openAutofillManagement(context: android.content.Context) {
             "Unable to open Autofill settings on this device.",
             Toast.LENGTH_SHORT
         ).show()
+    }
+}
+
+private fun buildQuickFillAutofillSettingsIntent(context: android.content.Context): Intent {
+    return Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).apply {
+        data = Uri.parse("package:${context.packageName}")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 }
 

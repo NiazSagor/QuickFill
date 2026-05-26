@@ -1,8 +1,5 @@
 package com.byteutility.dev.quickfill.ui.setup
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.byteutility.dev.quickfill.R
+import com.byteutility.dev.quickfill.ui.openQuickFillAutofillSettings
 import com.byteutility.dev.quickfill.ui.theme.QuickFillTheme
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
@@ -174,12 +172,7 @@ fun OnboardingControls(
         } else {
             Button(
                 onClick = {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        val intent = Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).apply {
-                            data = Uri.parse("package:com.byteutility.dev.quickfill")
-                        }
-                        context.startActivity(intent)
-                    }
+                    openQuickFillAutofillSettings(context)
                     onComplete()
                 },
                 modifier = Modifier.fillMaxWidth()
