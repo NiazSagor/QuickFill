@@ -71,7 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.byteutility.dev.quickfill.data.local.Snippet
-import com.byteutility.dev.quickfill.ui.isAutofillServiceEnabled
+import com.byteutility.dev.quickfill.ui.isQuickFillAutofillEnabled
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -268,7 +268,7 @@ private fun openAutofillManagement(context: android.content.Context) {
             }
         )
 
-        if (!isAutofillServiceEnabled(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (!isQuickFillAutofillEnabled(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             add(
                 Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).apply {
                     data = Uri.parse("package:${context.packageName}")

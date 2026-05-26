@@ -1,6 +1,7 @@
 package com.byteutility.dev.quickfill.ui
 
 import android.content.Context
+import android.os.Build
 import android.view.autofill.AutofillManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,11 +60,11 @@ fun QuickFillApp(
     }
 
     var isEnabled by remember {
-        mutableStateOf(isAutofillServiceEnabled(context))
+        mutableStateOf(isQuickFillAutofillEnabled(context))
     }
 
     LifecycleResumeEffect(Unit) {
-        isEnabled = isAutofillServiceEnabled(context)
+        isEnabled = isQuickFillAutofillEnabled(context)
         onPauseOrDispose { }
     }
 
@@ -90,7 +91,7 @@ fun QuickFillApp(
             setHasCompletedOnboarding(context)
             hasCompletedOnboarding = true
         },
-        onEnableClick = { isEnabled = isAutofillServiceEnabled(context) }
+        onEnableClick = { isEnabled = isQuickFillAutofillEnabled(context) }
     )
 }
 
@@ -169,9 +170,13 @@ fun QuickFillNavHost(
     }
 }
 
-fun isAutofillServiceEnabled(context: Context): Boolean {
+fun isQuickFillAutofillEnabled(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+
     val autofillManager = context.getSystemService(AutofillManager::class.java)
-    return autofillManager != null && autofillManager.hasEnabledAutofillServices()
+    return autofillManager != null &&
+            autofillManager.isAutofillSupported &&
+            autofillManager.hasEnabledAutofillServices()
 }
 
 private const val PREFS_NAME = "quickfill_prefs"
