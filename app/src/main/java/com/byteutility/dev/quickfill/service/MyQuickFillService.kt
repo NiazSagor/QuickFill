@@ -7,6 +7,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.CancellationSignal
 import android.service.autofill.AutofillService
@@ -28,7 +29,9 @@ import androidx.annotation.RequiresApi
 import androidx.autofill.inline.v1.InlineSuggestionUi
 import androidx.core.graphics.drawable.toBitmap
 import com.byteutility.dev.quickfill.R
+import com.byteutility.dev.quickfill.data.local.AppMetadata
 import com.byteutility.dev.quickfill.data.local.Snippet
+import com.byteutility.dev.quickfill.data.local.SnippetWithMetadata
 import com.byteutility.dev.quickfill.data.repository.SnippetRepository
 import com.byteutility.dev.quickfill.ui.AutofillTrampolineActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -76,17 +79,22 @@ class MyQuickFillService : AutofillService() {
         serviceScope.launch {
             try {
                 // ARCHITECTURAL DECISION: Save metadata here because we have visibility.
-                snippetRepository.saveAppMetadataFromSystem(packageName)
+                val currentAppMetadata = snippetRepository.saveAppMetadataFromSystem(packageName)
 
                 val category = runCatching {
                     val appInfo = packageManager.getApplicationInfo(packageName, 0)
                     detectCategory(appInfo, appInfo.packageName)
                 }.getOrDefault("GENERAL")
 
-                val snippets = getSnippetsForAutofill(packageName, category)
+                // PERFORMANCE OPTIMIZATION: Unified DB hit for snippets and metadata
+                val allSnippets = snippetRepository.getSnippetsForAutofill(packageName, category)
 
-                val datasets = snippets.map { buildSnippetDataset(it, fillId, request) } +
-                        buildAddSnippetDataset(packageName, fillId, request)
+                // Logic: if app-specific exists, only show those. Otherwise show global.
+                val appSpecific = allSnippets.filter { it.snippet.targetPackage == packageName }
+                val displaySnippets = if (appSpecific.isNotEmpty()) appSpecific else allSnippets
+
+                val datasets = displaySnippets.map { buildSnippetDataset(it, fillId, request) } +
+                        buildAddSnippetDataset(packageName, fillId, request, currentAppMetadata)
 
                 val response = FillResponse.Builder()
                     .apply { datasets.forEach { addDataset(it) } }
@@ -109,17 +117,23 @@ class MyQuickFillService : AutofillService() {
     private fun getAppIcon(packageName: String): Bitmap? {
         return runCatching {
             val drawable = packageManager.getApplicationIcon(packageName)
-            drawable.toBitmap() // requires androidx.core.graphics.drawable.toBitmap
+            drawable.toBitmap()
         }.getOrNull()
+    }
+
+    private fun decodeIconBlob(blob: ByteArray?): Bitmap? {
+        if (blob == null) return null
+        return BitmapFactory.decodeByteArray(blob, 0, blob.size)
     }
 
     private fun buildAddSnippetDataset(
         packageName: String,
         fillId: AutofillId,
-        request: FillRequest
+        request: FillRequest,
+        metadata: AppMetadata?
     ): Dataset {
-        val appLabel = getAppLabelForPackage(packageName)
-        val appIcon = getAppIcon(packageName) // Fetch the icon here
+        val appLabel = metadata?.label ?: getAppLabelForPackage(packageName)
+        val appIcon = decodeIconBlob(metadata?.iconBlob) ?: getAppIcon(packageName)
 
         val addSnippet = Snippet(
             id = -1,
@@ -194,11 +208,15 @@ class MyQuickFillService : AutofillService() {
     }
 
     private fun buildSnippetDataset(
-        snippet: Snippet,
+        snippetWithMetadata: SnippetWithMetadata,
         fillId: AutofillId,
         request: FillRequest
     ): Dataset {
-        val appIcon = snippet.targetPackage?.let { getAppIcon(it) }
+        val snippet = snippetWithMetadata.snippet
+        // PERFORMANCE OPTIMIZATION: Use cached icon blob from DB if available
+        val appIcon = decodeIconBlob(snippetWithMetadata.metadata?.iconBlob) 
+            ?: snippet.targetPackage?.let { getAppIcon(it) }
+
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             buildSnippetDatasetApi33(snippet, fillId, request, appIcon)
         } else {
@@ -420,26 +438,6 @@ class MyQuickFillService : AutofillService() {
     @RequiresApi(Build.VERSION_CODES.O)
     fun detectCategory(info: ApplicationInfo, packageName: String): String {
         return CategoryDetector.detectCategory(info.category, packageName)
-    }
-
-    private suspend fun getGlobalSnippetsForCategory(category: String): List<Snippet> {
-        return withContext(Dispatchers.IO) {
-            snippetRepository.getGlobalSnippetsForCategoryStream(category).first()
-        }
-    }
-
-    private suspend fun getSnippetsForPackage(p: String): List<Snippet> {
-        return withContext(Dispatchers.IO) {
-            val specific = snippetRepository.getSnippetsForPackageStream(p).first()
-            (specific).distinctBy { it.id }
-        }
-    }
-
-    private suspend fun getSnippetsForAutofill(packageName: String, category: String): List<Snippet> {
-        val appSpecific = getSnippetsForPackage(packageName)
-        return appSpecific.ifEmpty {
-            getGlobalSnippetsForCategory(category).distinctBy { it.id }
-        }
     }
 
     private fun findFocusedNode(structure: AssistStructure): AssistStructure.ViewNode? {
