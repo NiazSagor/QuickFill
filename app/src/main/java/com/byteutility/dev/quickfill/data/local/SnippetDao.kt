@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -28,6 +29,33 @@ interface SnippetDao {
         """
     )
     fun getGlobalSnippetsForCategoryStream(category: String): Flow<List<Snippet>>
+
+    /**
+     * PERFORMANCE OPTIMIZATION: Unified query for Autofill requests.
+     * Fetches snippets and joins AppMetadata in a single transaction.
+     * Results are ordered so that package-specific matches come first.
+     */
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM snippets
+        WHERE targetPackage = :packageName
+           OR (targetPackage IS NULL AND (category = :category OR category = 'GENERAL'))
+        ORDER BY (CASE WHEN targetPackage = :packageName THEN 0 ELSE 1 END), label ASC
+        """
+    )
+    fun getSnippetsForAutofillStream(packageName: String, category: String): Flow<List<SnippetWithMetadata>>
+
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM snippets
+        WHERE targetPackage = :packageName
+           OR (targetPackage IS NULL AND (category = :category OR category = 'GENERAL'))
+        ORDER BY (CASE WHEN targetPackage = :packageName THEN 0 ELSE 1 END), label ASC
+        """
+    )
+    suspend fun getSnippetsForAutofill(packageName: String, category: String): List<SnippetWithMetadata>
 
     /**
      * PERFORMANCE DECISION: Using DISTINCT in the database is significantly more 

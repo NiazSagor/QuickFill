@@ -14,12 +14,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.byteutility.dev.quickfill.data.repository.AutofillSettingsRepository
 import com.byteutility.dev.quickfill.ui.snippets.SnippetViewModel
 import com.byteutility.dev.quickfill.ui.theme.QuickFillTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var autofillSettingsRepository: AutofillSettingsRepository
 
     private val viewModel: SnippetViewModel by viewModels()
 
@@ -46,7 +51,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     QuickFillApp(
                         targetPackage = targetPackage.value,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        autofillSettingsRepository = autofillSettingsRepository
                     )
                 }
             }

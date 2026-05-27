@@ -1,7 +1,6 @@
 package com.byteutility.dev.quickfill.ui
 
 import android.content.Context
-import android.view.autofill.AutofillManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.byteutility.dev.quickfill.data.repository.AutofillSettingsRepository
 import com.byteutility.dev.quickfill.ui.setup.OnboardingScreen
 import com.byteutility.dev.quickfill.ui.setup.QuickFillSetupScreen
 import com.byteutility.dev.quickfill.ui.snippets.AddSnippetScreen
@@ -50,7 +50,8 @@ object Dest {
 @Composable
 fun QuickFillApp(
     targetPackage: String?,
-    viewModel: SnippetViewModel = viewModel()
+    viewModel: SnippetViewModel = viewModel(),
+    autofillSettingsRepository: AutofillSettingsRepository
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
@@ -59,11 +60,11 @@ fun QuickFillApp(
     }
 
     var isEnabled by remember {
-        mutableStateOf(isAutofillServiceEnabled(context))
+        mutableStateOf(autofillSettingsRepository.isQuickFillAutofillEnabled())
     }
 
     LifecycleResumeEffect(Unit) {
-        isEnabled = isAutofillServiceEnabled(context)
+        isEnabled = autofillSettingsRepository.isQuickFillAutofillEnabled()
         onPauseOrDispose { }
     }
 
@@ -86,11 +87,13 @@ fun QuickFillApp(
         hasCompletedOnboarding = hasCompletedOnboarding,
         isEnabled = isEnabled,
         viewModel = viewModel,
+        onOpenAutofillSettings = { autofillSettingsRepository.openQuickFillAutofillSettings() },
         onOnboardingComplete = {
             setHasCompletedOnboarding(context)
             hasCompletedOnboarding = true
         },
-        onEnableClick = { isEnabled = isAutofillServiceEnabled(context) }
+        onEnableClick = { isEnabled = autofillSettingsRepository.isQuickFillAutofillEnabled() },
+        isQuickFillAutofillEnabled = { autofillSettingsRepository.isQuickFillAutofillEnabled() }
     )
 }
 
@@ -100,8 +103,10 @@ fun QuickFillNavHost(
     hasCompletedOnboarding: Boolean,
     isEnabled: Boolean,
     viewModel: SnippetViewModel,
+    onOpenAutofillSettings: () -> Boolean,
     onOnboardingComplete: () -> Unit,
-    onEnableClick: () -> Unit
+    onEnableClick: () -> Unit,
+    isQuickFillAutofillEnabled: () -> Boolean
 ) {
     NavHost(
         navController = navController,
@@ -113,6 +118,7 @@ fun QuickFillNavHost(
     ) {
         composable(Dest.ONBOARDING) {
             OnboardingScreen(
+                onOpenAutofillSettings = onOpenAutofillSettings,
                 onComplete = {
                     onOnboardingComplete()
                     onEnableClick()
@@ -121,14 +127,15 @@ fun QuickFillNavHost(
         }
 
         composable(Dest.SETUP) {
-            QuickFillSetupScreen()
+            QuickFillSetupScreen(onOpenAutofillSettings = onOpenAutofillSettings)
         }
 
         composable(Dest.SNIPPET_LIST) {
             SnippetListScreen(
                 viewModel = viewModel,
                 onAddClick = { navController.navigate(Dest.passTargetPackage()) },
-                onEditClick = { id -> navController.navigate(Dest.passSnippetId(id)) }
+                onEditClick = { id -> navController.navigate(Dest.passSnippetId(id)) },
+                isQuickFillAutofillEnabled = isQuickFillAutofillEnabled
             )
         }
 
@@ -167,11 +174,6 @@ fun QuickFillNavHost(
             )
         }
     }
-}
-
-fun isAutofillServiceEnabled(context: Context): Boolean {
-    val autofillManager = context.getSystemService(AutofillManager::class.java)
-    return autofillManager != null && autofillManager.hasEnabledAutofillServices()
 }
 
 private const val PREFS_NAME = "quickfill_prefs"

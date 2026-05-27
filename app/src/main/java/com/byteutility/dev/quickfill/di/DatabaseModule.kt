@@ -5,6 +5,8 @@ import androidx.room.Room
 import com.byteutility.dev.quickfill.BuildConfig
 import com.byteutility.dev.quickfill.data.local.SnippetDao
 import com.byteutility.dev.quickfill.data.local.SnippetDatabase
+import com.byteutility.dev.quickfill.data.repository.AutofillSettingsRepository
+import com.byteutility.dev.quickfill.data.repository.DefaultAutofillSettingsRepository
 import com.byteutility.dev.quickfill.data.repository.DefaultSnippetRepository
 import com.byteutility.dev.quickfill.data.repository.SnippetRepository
 import com.byteutility.dev.quickfill.util.SecurityManager
@@ -27,6 +29,12 @@ abstract class DatabaseModule {
     abstract fun bindSnippetRepository(
         defaultSnippetRepository: DefaultSnippetRepository
     ): SnippetRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAutofillSettingsRepository(
+        defaultAutofillSettingsRepository: DefaultAutofillSettingsRepository
+    ): AutofillSettingsRepository
 
     companion object {
         @Provides

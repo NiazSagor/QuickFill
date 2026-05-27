@@ -6,6 +6,7 @@ import androidx.core.graphics.drawable.toBitmap
 import com.byteutility.dev.quickfill.data.local.AppMetadata
 import com.byteutility.dev.quickfill.data.local.Snippet
 import com.byteutility.dev.quickfill.data.local.SnippetDao
+import com.byteutility.dev.quickfill.data.local.SnippetWithMetadata
 import com.byteutility.dev.quickfill.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,10 +23,11 @@ interface SnippetRepository {
     fun getGlobalSnippetsForCategoryStream(category: String): Flow<List<Snippet>>
     fun getKnownPackagesStream(): Flow<List<String>>
     fun getAppMetadataStream(packageName: String): Flow<AppMetadata?>
+    suspend fun getSnippetsForAutofill(packageName: String, category: String): List<SnippetWithMetadata>
     suspend fun getSnippetById(id: Int): Snippet?
     suspend fun insertSnippet(snippet: Snippet)
     suspend fun deleteSnippet(snippet: Snippet)
-    suspend fun saveAppMetadataFromSystem(packageName: String)
+    suspend fun saveAppMetadataFromSystem(packageName: String): AppMetadata?
 }
 
 @Singleton
@@ -52,6 +54,12 @@ class DefaultSnippetRepository @Inject constructor(
     override fun getAppMetadataStream(packageName: String): Flow<AppMetadata?> =
         snippetDao.getAppMetadataStream(packageName)
 
+    override suspend fun getSnippetsForAutofill(
+        packageName: String,
+        category: String
+    ): List<SnippetWithMetadata> =
+        snippetDao.getSnippetsForAutofill(packageName, category)
+
     override suspend fun getSnippetById(id: Int): Snippet? = snippetDao.getSnippetById(id)
 
     override suspend fun insertSnippet(snippet: Snippet) {
@@ -67,8 +75,8 @@ class DefaultSnippetRepository @Inject constructor(
      * This bypasses Android 11+ Package Visibility restrictions for future lookups
      * and ensures the app works without QUERY_ALL_PACKAGES.
      */
-    override suspend fun saveAppMetadataFromSystem(packageName: String) {
-        withContext(ioDispatcher) {
+    override suspend fun saveAppMetadataFromSystem(packageName: String): AppMetadata? {
+        return withContext(ioDispatcher) {
             runCatching {
                 val pm = context.packageManager
                 val info = pm.getApplicationInfo(packageName, 0)
@@ -88,7 +96,8 @@ class DefaultSnippetRepository @Inject constructor(
                     iconBlob = stream.toByteArray()
                 )
                 snippetDao.insertAppMetadata(metadata)
-            }
+                metadata
+            }.getOrNull()
         }
     }
 }
